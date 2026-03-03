@@ -1,0 +1,22 @@
+**/.terraform/
+**/.terragrunt-cache/
+
+# Terraform state and plans
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Generated files
+**/provider.tf
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive variable files
+**/terraform.tfvars
+**/terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json

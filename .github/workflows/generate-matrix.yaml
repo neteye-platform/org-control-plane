@@ -1,0 +1,31 @@
+name: Generate Matrix
+
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: "Matrix for Terragrunt jobs"
+        value: ${{ jobs.generate-matrix.outputs.matrix }}
+
+jobs:
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.create-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create matrix for Terraform plan
+        id: create-matrix
+        run: |
+          repo_categories_folders=$(find repositories -mindepth 1 -maxdepth 1 -type d | jq -R -s -c 'split("\n")[:-1]')
+          units=$(jq -cn \
+            --arg teams "teams" \
+            --arg org "org-settings" \
+            --argjson repos "$repo_categories_folders" \
+            '[$teams, $org] + $repos')
+          echo "matrix={\"unit\": $units}" >>"$GITHUB_OUTPUT"
