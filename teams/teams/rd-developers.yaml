@@ -1,0 +1,5 @@
+name: rd-developers
+description: "Developers of the NetEye Platform Org."
+privacy: closed
+notification_setting: notifications_enabled
+# ldap_dn needs to be set manually

@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/neteye-platform/org-control-plane/schemas/repo.schema.json",
+  "title": "Repository Configuration Schema",
+  "description": "JSON Schema for validating GitHub repository YAML configuration files",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["description"],
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Repository description (REQUIRED). Must be provided by each repo configuration."
+    },
+    "name": {
+      "type": "string",
+      "description": "Repository name. Defaults to filename if omitted."
+    },
+    "auto_init": {
+      "type": "boolean",
+      "description": "Automatically initialize the repository with README.",
+      "default": true
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private", "internal"],
+      "description": "Repository visibility setting.",
+      "default": "private"
+    },
+    "has_issues": {
+      "type": "boolean",
+      "description": "Enable GitHub Issues.",
+      "default": true
+    },
+    "has_wiki": {
+      "type": "boolean",
+      "description": "Enable GitHub Wiki.",
+      "default": false
+    },
+    "has_projects": {
+      "type": "boolean",
+      "description": "Enable GitHub Projects.",
+      "default": false
+    },
+    "has_discussions": {
+      "type": "boolean",
+      "description": "Enable GitHub Discussions.",
+      "default": false
+    },
+    "allow_merge_commit": {
+      "type": "boolean",
+      "description": "Allow merge commits.",
+      "default": false
+    },
+    "allow_squash_merge": {
+      "type": "boolean",
+      "description": "Allow squash merges.",
+      "default": true
+    },
+    "allow_rebase_merge": {
+      "type": "boolean",
+      "description": "Allow rebase merges.",
+      "default": false
+    },
+    "squash_merge_commit_title": {
+      "type": "string",
+      "enum": ["PR_TITLE", "COMMIT_OR_PR_TITLE"],
+      "description": "Commit title for squash merges.",
+      "default": "PR_TITLE"
+    },
+    "squash_merge_commit_message": {
+      "type": "string",
+      "enum": ["COMMIT_MESSAGES", "PR_BODY", "BLANK"],
+      "description": "Commit message for squash merges.",
+      "default": "COMMIT_MESSAGES"
+    },
+    "delete_branch_on_merge": {
+      "type": "boolean",
+      "description": "Automatically delete head branches on merge.",
+      "default": true
+    },
+    "archived": {
+      "type": "boolean",
+      "description": "Archive the repository.",
+      "default": false
+    },
+    "vulnerability_alerts": {
+      "type": "boolean",
+      "description": "Enable vulnerability alerts for dependencies.",
+      "default": true
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$",
+        "description": "Repository topic (lowercase alphanumeric and hyphens only)."
+      },
+      "maxItems": 20,
+      "description": "Repository topics for discoverability.",
+      "default": []
+    },
+    "branch_protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Branch protection rules configuration.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable branch protection.",
+          "default": true
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Branch name pattern to protect (e.g., 'main').",
+          "default": "main"
+        },
+        "required_approvals": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of required approvals before merge.",
+          "default": 1
+        },
+        "dismiss_stale_reviews": {
+          "type": "boolean",
+          "description": "Dismiss stale reviews when new commits are pushed.",
+          "default": true
+        },
+        "require_code_owner_reviews": {
+          "type": "boolean",
+          "description": "Require code owner approval.",
+          "default": false
+        },
+        "enforce_admins": {
+          "type": "boolean",
+          "description": "Enforce branch protection rules on admins.",
+          "default": false
+        },
+        "required_status_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required status checks before merge.",
+          "default": []
+        },
+        "strict_status_checks": {
+          "type": "boolean",
+          "description": "Require status checks to be up-to-date before merge.",
+          "default": false
+        }
+      }
+    },
+    "teams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Team name."
+          },
+          "permission": {
+            "type": "string",
+            "enum": ["push", "pull", "admin", "maintain", "triage"],
+            "description": "Team permission level for the repository."
+          }
+        }
+      },
+      "description": "Teams with repository access."
+    },
+    "webhooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Webhook URL endpoint."
+          },
+          "content_type": {
+            "type": "string",
+            "enum": ["form", "json"],
+            "description": "Content type for webhook payload.",
+            "default": "form"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Webhook events to subscribe to."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Activate the webhook.",
+            "default": true
+          }
+        }
+      },
+      "description": "Webhooks for repository events."
+    },
+    "autolinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key_prefix", "target_url_template"],
+        "properties": {
+          "key_prefix": {
+            "type": "string",
+            "description": "Autolink key prefix (e.g., 'ISSUE-')."
+          },
+          "target_url_template": {
+            "type": "string",
+            "description": "Target URL template with <num> placeholder (e.g., 'https://example.com/issues/<num>')."
+          },
+          "is_alphanumeric": {
+            "type": "boolean",
+            "description": "Allow alphanumeric references (vs numeric only).",
+            "default": false
+          }
+        }
+      },
+      "description": "Autolinks for issue references."
+    }
+  }
+}

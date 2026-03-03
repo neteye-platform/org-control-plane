@@ -1,0 +1,2 @@
+[tools]
+terragrunt = "0.99.4"

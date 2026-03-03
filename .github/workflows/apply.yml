@@ -1,0 +1,56 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get Terraform Version
+        id: tf_version
+        run: |
+          echo "value=$(cat .terraform-version)" >> $GITHUB_OUTPUT
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          terraform_version: ${{ steps.tf_version.outputs.value }}
+
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        id: generate-token
+        with:
+          app-id: ${{ vars.NETEYE_APP_ID }}
+          private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # - name: Apply
+      #   uses: gruntwork-io/terragrunt-action@53dbdc2c3d43e82bf3bae10b734a968196442bec # v3.2.0
+      #   env:
+      #     GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+      #     TF_VAR_github_org: ${{ github.repository_owner }}
+      #     TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      #     GITHUB_APP_ID: ${{ vars.NETEYE_APP_ID }}
+      #     GITHUB_APP_INSTALLATION_ID: ${{ steps.generate-token.outputs.installation-id }}
+      #     GITHUB_APP_PEM_FILE: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+      #     TG_PARALLELISM: 1 # Sequential execution to avoid rate limits
+      #   with:
+      #     github_token: ${{ steps.generate-token.outputs.token }}
+      #     tg_dir: "${{ matrix.unit }}"
+      #     tg_command: "apply"

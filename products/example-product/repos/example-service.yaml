@@ -1,0 +1,11 @@
+# Minimal example service repository
+# Demonstrates the simplest valid repo configuration
+# Inherits all other settings from org defaults → product defaults merge
+
+description: "Example service repository demonstrating minimal configuration"
+
+# Team access can be simple or with explicit permissions
+teams:
+  - name: "platform-engineering"
+  - name: "developers"
+    permission: "pull"

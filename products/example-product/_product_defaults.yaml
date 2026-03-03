@@ -1,0 +1,7 @@
+# Product-level defaults for example-product
+# These override org defaults from _defaults.yaml
+# Per-repo YAML can further override these values
+
+# Example: Require 2 approvals for this product (higher than org default of 1)
+branch_protection:
+  required_approvals: 2
