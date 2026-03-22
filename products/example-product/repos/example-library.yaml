@@ -1,0 +1,27 @@
+# Example library repository demonstrating three-tier merge overrides
+# Shows how org defaults → product defaults → repo overrides stack
+
+description: "Example library demonstrating configuration override hierarchy"
+
+# Override product visibility (example-product keeps product default of private)
+visibility: internal
+
+# Override branch protection requirements to be stricter than product (3 vs 2)
+branch_protection:
+  required_approvals: 3
+  require_code_owner_reviews: true
+
+# Add topics specific to this library
+topics:
+  - sdk
+  - shared-library
+  - go
+
+# Team access with explicit permissions
+teams:
+  - name: "platform-engineering"
+    permission: "admin"
+  - name: "core-maintainers"
+    permission: "maintain"
+  - name: "developers"
+    permission: "pull"
