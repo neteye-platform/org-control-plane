@@ -30,4 +30,10 @@ resource "github_organization_settings" "org" {
   dependency_graph_enabled_for_new_repositories                = var.settings.dependency_graph_enabled_for_new_repositories
   secret_scanning_enabled_for_new_repositories                 = var.settings.secret_scanning_enabled_for_new_repositories
   secret_scanning_push_protection_enabled_for_new_repositories = var.settings.secret_scanning_push_protection_enabled_for_new_repositories
+
+  # Prevent destruction of org settings to avoid accidental deletion of critical configuration
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
