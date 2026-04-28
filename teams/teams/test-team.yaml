@@ -1,0 +1,5 @@
+name: test-team
+description: This is a test team.
+privacy: closed
+notification_setting: notifications_enabled
+# ldap_dn needs to be set manually

@@ -1,0 +1,29 @@
+visibility: public
+has_issues: true
+has_discussions: false
+has_projects: false
+has_wiki: false
+allow_merge_commit: false
+allow_squash_merge: true
+allow_rebase_merge: false
+allow_auto_merge: false
+squash_merge_commit_title: COMMIT_OR_PR_TITLE
+squash_merge_commit_message: BLANK
+merge_commit_title: MERGE_MESSAGE
+merge_commit_message: BLANK
+delete_branch_on_merge: true
+web_commit_signoff_required: true
+auto_init: false
+security_and_analysis:
+  advanced_security:
+    status: enabled
+  secret_scanning:
+    status: enabled
+  secret_scanning_push_protection:
+    status: enabled
+  secret_scanning_ai_detection:
+    status: enabled
+  secret_scanning_non_provider_patterns:
+    status: enabled
+vulnerability_alerts: true
+allow_update_branch: true
