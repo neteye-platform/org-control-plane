@@ -67,9 +67,17 @@ jobs:
         with:
           tg_command: "hcl fmt --check --diff"
 
-      - name: Generate GitHub App token
+      # NOTE: Do not specify permissions for this GitHub App token since we want all permissions granted to this app.
+      - name: Generate GitHub App token for GitHub authentication
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
-        id: generate-token
+        id: generate-token-auth
+        with:
+          app-id: ${{ vars.NETEYE_MANAGER_APP_ID }}
+          private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+
+      - name: Generate GitHub App token for commenting on PRs
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        id: generate-token-comment
         with:
           app-id: ${{ vars.NETEYE_APP_ID }}
           private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
@@ -85,14 +93,16 @@ jobs:
       - name: Terragrunt Plan
         uses: gruntwork-io/terragrunt-action@53dbdc2c3d43e82bf3bae10b734a968196442bec # v3.2.0
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.generate-token-comment.outputs.token }}
           TF_VAR_github_org: ${{ github.repository_owner }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
           TF_VAR_billing_email: ${{ secrets.BILLING_EMAIL }}
-          GITHUB_APP_ID: ${{ vars.NETEYE_APP_ID }}
-          GITHUB_APP_INSTALLATION_ID: ${{ steps.generate-token.outputs.installation-id }}
-          GITHUB_APP_PEM_FILE: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+          GITHUB_APP_ID: ${{ vars.NETEYE_MANAGER_APP_ID }}
+          GITHUB_APP_INSTALLATION_ID: ${{ steps.generate-token-auth.outputs.installation-id }}
+          GITHUB_APP_PEM_FILE: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+          TG_PARALLELISM: 1 # Sequential execution to avoid rate limits
         with:
+          github_token: ${{ steps.generate-token-auth.outputs.token }}
           tg_dir: "${{ matrix.unit }}"
           tg_command: "plan"
           tg_comment: 1
