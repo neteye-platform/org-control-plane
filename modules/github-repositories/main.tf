@@ -35,27 +35,7 @@ resource "github_repository" "repos" {
   license_template            = try(each.value.license_template, null)
   archived                    = each.value.archived
   archive_on_destroy          = try(each.value.archive_on_destroy, false)
-  dynamic "security_and_analysis" {
-    for_each = each.value.security_and_analysis != null ? [each.value.security_and_analysis] : []
-    content {
-      advanced_security {
-        status = security_and_analysis.value.advanced_security.status
-      }
-      secret_scanning {
-        status = security_and_analysis.value.secret_scanning.status
-      }
-      secret_scanning_push_protection {
-        status = security_and_analysis.value.secret_scanning_push_protection.status
-      }
-      secret_scanning_ai_detection {
-        status = security_and_analysis.value.secret_scanning_ai_detection.status
-      }
-      secret_scanning_non_provider_patterns {
-        status = security_and_analysis.value.secret_scanning_non_provider_patterns.status
-      }
-    }
-  }
-  topics = try(each.value.topics, [])
+  topics                      = try(each.value.topics, [])
   template {
     owner                = try(each.value.template.owner, null)
     repository           = try(each.value.template.repository, null)
