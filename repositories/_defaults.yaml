@@ -9,10 +9,7 @@ allow_rebase_merge: false
 allow_auto_merge: false
 squash_merge_commit_title: PR_TITLE
 squash_merge_commit_message: PR_BODY
-merge_commit_title: PR_TITLE
-merge_commit_message: PR_BODY
 delete_branch_on_merge: true
-web_commit_signoff_required: true
 auto_init: false
 vulnerability_alerts: true
 allow_update_branch: true

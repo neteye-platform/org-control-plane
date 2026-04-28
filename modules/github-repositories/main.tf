@@ -26,10 +26,7 @@ resource "github_repository" "repos" {
   allow_forking               = try(each.value.allow_forking, null)
   squash_merge_commit_title   = each.value.squash_merge_commit_title
   squash_merge_commit_message = each.value.squash_merge_commit_message
-  merge_commit_title          = each.value.merge_commit_title
-  merge_commit_message        = each.value.merge_commit_message
   delete_branch_on_merge      = each.value.delete_branch_on_merge
-  web_commit_signoff_required = each.value.web_commit_signoff_required
   auto_init                   = each.value.auto_init
   gitignore_template          = try(each.value.gitignore_template, null)
   license_template            = try(each.value.license_template, null)
