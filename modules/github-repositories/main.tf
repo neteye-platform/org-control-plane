@@ -38,8 +38,7 @@ resource "github_repository" "repos" {
     repository           = try(each.value.template.repository, null)
     include_all_branches = try(each.value.template.include_all_branches, null)
   }
-  vulnerability_alerts = each.value.vulnerability_alerts
-  allow_update_branch  = each.value.allow_update_branch
+  allow_update_branch = each.value.allow_update_branch
 
   # Prevent recreation on taint or destroy to avoid accidental deletion of repositories
   lifecycle {
