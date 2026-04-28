@@ -6,6 +6,10 @@ include "root" {
 }
 
 # Dependency on teams to ensure they exist before repo team references
+dependencies {
+  paths = ["../../teams"]
+}
+
 dependency "teams" {
   config_path = "../../teams"
 
