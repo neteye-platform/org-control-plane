@@ -11,5 +11,4 @@ squash_merge_commit_title: PR_TITLE
 squash_merge_commit_message: PR_BODY
 delete_branch_on_merge: true
 auto_init: false
-vulnerability_alerts: true
 allow_update_branch: true
