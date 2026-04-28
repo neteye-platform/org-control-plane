@@ -43,4 +43,9 @@ resource "github_repository" "repos" {
   }
   vulnerability_alerts = each.value.vulnerability_alerts
   allow_update_branch  = each.value.allow_update_branch
+
+  # Prevent recreation on taint or destroy to avoid accidental deletion of repositories
+  lifecycle {
+    prevent_destroy = true
+  }
 }

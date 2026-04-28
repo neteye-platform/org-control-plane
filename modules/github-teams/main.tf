@@ -10,6 +10,12 @@ resource "github_team" "teams" {
   description    = each.value.description
   privacy        = each.value.privacy
   parent_team_id = lookup(each.value, "parent_team_id", null)
+
+  # Prevent destruction of teams to avoid accidental deletion of critical access groups
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
 
 resource "github_team_membership" "memberships" {
@@ -21,4 +27,9 @@ resource "github_team_membership" "memberships" {
   team_id  = github_team.teams[each.value.team].id
   username = each.value.username
   role     = each.value.role
+
+  # Prevent destruction of team memberships to avoid accidental loss of access for users
+  lifecycle {
+    prevent_destroy = true
+  }
 }
