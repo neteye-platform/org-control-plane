@@ -34,34 +34,6 @@ jobs:
         with:
           terraform_version: ${{ steps.tf_version.outputs.value }}
 
-      - name: Check for duplicate teams and repository names
-        run: |
-          set -euo pipefail
-
-          team_duplicates=$(
-            yq -r '.name' teams/teams/*.yaml \
-            | sort \
-            | uniq -d
-          )
-
-          repository_duplicates=$(
-            yq -r '.name' repositories/*/*/*.yaml \
-            | sort \
-            | uniq -d
-          )
-
-          if [ -n "$team_duplicates" ]; then
-            echo "Duplicate team names found:"
-            echo "$team_duplicates"
-            exit 1
-          fi
-
-          if [ -n "$repository_duplicates" ]; then
-            echo "Duplicate repository names found:"
-            echo "$repository_duplicates"
-            exit 1
-          fi
-
       - name: Check HCL formatting
         uses: gruntwork-io/terragrunt-action@53dbdc2c3d43e82bf3bae10b734a968196442bec # v3.2.0
         with:

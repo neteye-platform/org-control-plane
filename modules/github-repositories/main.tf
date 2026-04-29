@@ -33,10 +33,14 @@ resource "github_repository" "repos" {
   archived                    = each.value.archived
   archive_on_destroy          = try(each.value.archive_on_destroy, false)
   topics                      = try(each.value.topics, [])
-  template {
-    owner                = try(each.value.template.owner, null)
-    repository           = try(each.value.template.repository, null)
-    include_all_branches = try(each.value.template.include_all_branches, null)
+  dynamic "template" {
+    for_each = try([each.value.template], [])
+
+    content {
+      owner                = template.value.owner
+      repository           = template.value.repository
+      include_all_branches = template.value.include_all_branches
+    }
   }
   allow_update_branch = each.value.allow_update_branch
 

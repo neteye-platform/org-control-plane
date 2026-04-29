@@ -19,6 +19,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Check for duplicate teams and repository names
+        run: |
+          set -euo pipefail
+
+          team_duplicates=$(
+            yq --no-doc '.name' teams/teams/*.yaml \
+            | sort \
+            | uniq -d
+          )
+
+          repository_duplicates=$(
+            yq --no-doc '.name' repositories/*/repos/*.yaml \
+            | sort \
+            | uniq -d
+          )
+
+          if [ -n "$team_duplicates" ]; then
+            echo "Duplicate team names found:"
+            echo "$team_duplicates"
+            exit 1
+          fi
+
+          if [ -n "$repository_duplicates" ]; then
+            echo "Duplicate repository names found:"
+            echo "$repository_duplicates"
+            exit 1
+          fi
+
       - name: Create matrix for Terraform plan
         id: create-matrix
         run: |
