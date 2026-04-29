@@ -1,6 +1,5 @@
-name: test-repo
-description: This is a test repository.
-homepage_url: www.example.com
+name: neteye.pcs
+description: Ansible NetEye PCS collection.
 is_template: false
 archived: false
 template:

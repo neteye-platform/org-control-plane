@@ -1,0 +1,8 @@
+name: kubeconform-precommit
+description: pre-commit hook to validate Kubernetes manifests with Kubeconform, with support for regex filtering and Kustomize builds.
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false

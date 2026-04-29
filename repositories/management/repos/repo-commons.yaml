@@ -1,0 +1,8 @@
+name: repo-commons
+description: Central repository for shared configuration files.
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
