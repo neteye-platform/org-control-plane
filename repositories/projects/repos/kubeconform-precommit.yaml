@@ -2,7 +2,10 @@ name: kubeconform-precommit
 description: pre-commit hook to validate Kubernetes manifests with Kubeconform, with support for regex filtering and Kustomize builds.
 is_template: false
 archived: false
-template:
-  owner: neteye-platform
-  repository: default-repository-template
-  include_all_branches: false
+# NOTE: This repository was not created from the template, but the configuration files were copied into.
+# Do not define the template configuration, otherwise the GitHub Terraform provider will attempt
+# to reapply the template settings on every run.
+# template:
+#   owner: neteye-platform
+#   repository: default-repository-template
+#   include_all_branches: false
