@@ -19,7 +19,7 @@ on:
       AWS_REGION:
         required: true
       BILLING_EMAIL:
-        required: true
+        required: false
       NETEYE_MANAGER_APP_PRIVATE_KEY:
         required: true
 
