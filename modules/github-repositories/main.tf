@@ -49,3 +49,57 @@ resource "github_repository" "repos" {
     prevent_destroy = true
   }
 }
+
+resource "github_repository_ruleset" "main_protection" {
+  for_each    = local.ruleset_configs
+  name        = each.value.name
+  repository  = github_repository.repos[each.key].name
+  target      = "branch"
+  enforcement = each.value.enforcement
+
+  dynamic "bypass_actors" {
+    for_each = each.value.bypass_actors
+    content {
+      actor_id    = bypass_actors.value.actor_id
+      actor_type  = bypass_actors.value.actor_type
+      bypass_mode = bypass_actors.value.bypass_mode
+    }
+  }
+
+  conditions {
+    ref_name {
+      include = [for t in each.value.targets : "refs/heads/${t}"]
+      exclude = []
+    }
+  }
+
+  rules {
+    deletion            = each.value.restrict_deletions
+    non_fast_forward    = each.value.block_force_pushes
+    required_signatures = each.value.require_signed_commits
+
+    required_status_checks {
+      strict_required_status_checks_policy = each.value.strict_status_checks
+
+      dynamic "required_check" {
+        for_each = each.value.checks
+        content {
+          context = required_check.value
+        }
+      }
+    }
+
+    pull_request {
+      required_approving_review_count   = each.value.pr_required_approving_review_count
+      dismiss_stale_reviews_on_push     = each.value.pr_dismiss_stale_reviews_on_push
+      require_last_push_approval        = each.value.pr_require_last_push_approval
+      require_code_owner_review         = each.value.pr_require_code_owner_review
+      required_review_thread_resolution = each.value.pr_required_review_thread_resolution
+    }
+
+    copilot_code_review {
+      review_on_push             = each.value.copilot_review_on_push
+      review_draft_pull_requests = each.value.copilot_review_draft_prs
+    }
+  }
+}
