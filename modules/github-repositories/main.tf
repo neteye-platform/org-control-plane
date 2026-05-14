@@ -50,10 +50,11 @@ resource "github_repository" "repos" {
   }
 }
 
-resource "github_repository_ruleset" "main_protection" {
+# One ruleset resource per (repo, ruleset_name) pair; keyed as "repo/ruleset"
+resource "github_repository_ruleset" "rulesets" {
   for_each    = local.ruleset_configs
   name        = each.value.name
-  repository  = github_repository.repos[each.key].name
+  repository  = github_repository.repos[each.value.repo_name].name
   target      = each.value.target
   enforcement = each.value.enforcement
 
@@ -79,31 +80,41 @@ resource "github_repository_ruleset" "main_protection" {
     required_signatures     = each.value.rules.required_signatures
     required_linear_history = each.value.rules.required_linear_history
 
-    pull_request {
-      allowed_merge_methods             = each.value.rules.pull_request.allowed_merge_methods
-      required_approving_review_count   = each.value.rules.pull_request.required_approving_review_count
-      dismiss_stale_reviews_on_push     = each.value.rules.pull_request.dismiss_stale_reviews_on_push
-      require_last_push_approval        = each.value.rules.pull_request.require_last_push_approval
-      require_code_owner_review         = each.value.rules.pull_request.require_code_owner_review
-      required_review_thread_resolution = each.value.rules.pull_request.required_review_thread_resolution
+    # Optional rule blocks: only emitted when the ruleset actually configures them
+    dynamic "pull_request" {
+      for_each = each.value.rules._has_pull_request ? [each.value.rules.pull_request] : []
+      content {
+        allowed_merge_methods             = pull_request.value.allowed_merge_methods
+        required_approving_review_count   = pull_request.value.required_approving_review_count
+        dismiss_stale_reviews_on_push     = pull_request.value.dismiss_stale_reviews_on_push
+        require_last_push_approval        = pull_request.value.require_last_push_approval
+        require_code_owner_review         = pull_request.value.require_code_owner_review
+        required_review_thread_resolution = pull_request.value.required_review_thread_resolution
+      }
     }
 
-    required_status_checks {
-      strict_required_status_checks_policy = each.value.rules.required_status_checks.strict_required_status_checks_policy
-      do_not_enforce_on_create             = each.value.rules.required_status_checks.do_not_enforce_on_create
+    dynamic "required_status_checks" {
+      for_each = length(each.value.rules.required_status_checks.required_check) > 0 ? [each.value.rules.required_status_checks] : []
+      content {
+        strict_required_status_checks_policy = required_status_checks.value.strict_required_status_checks_policy
+        do_not_enforce_on_create             = required_status_checks.value.do_not_enforce_on_create
 
-      dynamic "required_check" {
-        for_each = each.value.rules.required_status_checks.required_check
-        content {
-          context        = required_check.value.context
-          integration_id = try(required_check.value.integration_id, null)
+        dynamic "required_check" {
+          for_each = required_status_checks.value.required_check
+          content {
+            context        = required_check.value.context
+            integration_id = try(required_check.value.integration_id, null)
+          }
         }
       }
     }
 
-    copilot_code_review {
-      review_on_push             = each.value.rules.copilot_code_review.review_on_push
-      review_draft_pull_requests = each.value.rules.copilot_code_review.review_draft_pull_requests
+    dynamic "copilot_code_review" {
+      for_each = each.value.rules._has_copilot_review ? [each.value.rules.copilot_code_review] : []
+      content {
+        review_on_push             = copilot_code_review.value.review_on_push
+        review_draft_pull_requests = copilot_code_review.value.review_draft_pull_requests
+      }
     }
 
     dynamic "merge_queue" {
