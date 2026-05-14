@@ -130,4 +130,9 @@ resource "github_repository_ruleset" "rulesets" {
       }
     }
   }
+
+  # Prevent ruleset deletion to avoid accidental loss of branch protection settings
+  lifecycle {
+    prevent_destroy = true
+  }
 }
