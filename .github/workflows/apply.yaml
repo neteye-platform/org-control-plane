@@ -1,4 +1,4 @@
-name: Terraform Apply
+name: Terragrunt Apply
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - "main"
 
 concurrency:
-  group: terraform-apply
+  group: terragrunt-apply
   cancel-in-progress: false
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/generate-matrix.yaml
 
-  terraform-apply:
+  terragrunt-apply:
     needs: generate-matrix
     permissions:
       contents: read

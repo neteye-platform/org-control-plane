@@ -87,7 +87,7 @@ jobs:
               core.info(`Deleted comment ${c.id}`);
             }
 
-  terraform-plan:
+  terragrunt-plan:
     name: Terragrunt Plan
     needs: cleanup-plan-comments
     runs-on: ubuntu-latest
