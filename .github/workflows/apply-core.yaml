@@ -24,7 +24,7 @@ on:
         required: true
 
 jobs:
-  terraform-apply:
+  terragrunt-apply:
     name: Terragrunt Apply
     runs-on: ubuntu-latest
     permissions:

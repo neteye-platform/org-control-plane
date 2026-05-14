@@ -11,7 +11,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/generate-matrix.yaml
 
-  terraform-plan:
+  terragrunt-plan:
     needs: generate-matrix
     permissions:
       contents: read
@@ -27,3 +27,13 @@ jobs:
       BILLING_EMAIL: ${{ secrets.BILLING_EMAIL }}
       NETEYE_MANAGER_APP_PRIVATE_KEY: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
       NETEYE_APP_PRIVATE_KEY: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+
+  terragrunt-plan-success:
+    name: Terragrunt Plan Success
+    needs: terragrunt-plan
+    permissions:
+      contents: none
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "All plan jobs completed successfully!"
