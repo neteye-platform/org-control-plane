@@ -9,38 +9,12 @@ terraform {
   source = "${get_repo_root()}//modules/github-org-settings"
 }
 
-inputs = {
-  github_org = include.root.locals.github_org
-
-  settings = {
-    billing_email                                                = local.billing_email
-    company                                                      = "Würth IT Italy"
-    blog                                                         = "https://neteye.guide"
-    email                                                        = ""
-    location                                                     = "Italy"
-    name                                                         = "NetEye"
-    description                                                  = "NetEye Unified Monitoring Platform"
-    has_organization_projects                                    = false
-    has_repository_projects                                      = true
-    default_repository_permission                                = "read"
-    members_can_create_repositories                              = true
-    members_can_create_public_repositories                       = true
-    members_can_create_private_repositories                      = false
-    members_can_create_internal_repositories                     = false
-    members_can_create_pages                                     = false
-    members_can_create_public_pages                              = false
-    members_can_create_private_pages                             = false
-    members_can_fork_private_repositories                        = false
-    web_commit_signoff_required                                  = true
-    advanced_security_enabled_for_new_repositories               = true
-    dependabot_alerts_enabled_for_new_repositories               = true
-    dependabot_security_updates_enabled_for_new_repositories     = true
-    dependency_graph_enabled_for_new_repositories                = true
-    secret_scanning_enabled_for_new_repositories                 = true
-    secret_scanning_push_protection_enabled_for_new_repositories = true
-  }
+locals {
+  settings = yamldecode(file("${get_terragrunt_dir()}/settings.yaml"))
 }
 
-locals {
-  billing_email = get_env("TF_VAR_billing_email")
+inputs = {
+  settings = merge(local.settings, {
+    billing_email = get_env("TF_VAR_billing_email")
+  })
 }
