@@ -15,32 +15,38 @@ allow_update_branch: true
 
 branch_ruleset:
   name: "main-branch-protection"
-  targets:
-    - main
+  target: branch
   enforcement: active
   bypass_actors:
-    - actor_type: RepositoryRole
-      actor_id: 5 # Repository admin role
+    - actor_id: 5
+      actor_type: RepositoryRole
       bypass_mode: pull_request
-    - actor_type: OrganizationAdmin
-      actor_id: 1
+    - actor_id: 1
+      actor_type: OrganizationAdmin
       bypass_mode: pull_request
-  restrict_deletions: true
-  require_signed_commits: true
-  block_force_pushes: true
-  copilot_review_on_push: true
-  copilot_review_draft_pull_requests: false
-  pull_request:
-    required_approving_review_count: 1
-    dismiss_stale_reviews_on_push: true
-    require_last_push_approval: true
-    require_code_owner_review: true
-    required_review_thread_resolution: true
-  require_status_checks:
-    strict: true
-    checks:
-      - "common-pull-request-checks / pre-commit-checks / Pre-commit Checks"
-      - "common-pull-request-checks / semgrep-scan / Semgrep Scan"
-      - "common-pull-request-checks / trivy-scan / Trivy Config Scan"
-      - "common-pull-request-checks / trivy-scan / Trivy FS Scan"
-      - "common-pull-request-checks / codeql-scan / CodeQL Scan"
+  conditions:
+    ref_name:
+      include:
+        - "main"
+      exclude: []
+  rules:
+    deletion: true
+    non_fast_forward: true
+    required_signatures: true
+    pull_request:
+      required_approving_review_count: 1
+      dismiss_stale_reviews_on_push: true
+      require_last_push_approval: true
+      require_code_owner_review: true
+      required_review_thread_resolution: true
+    required_status_checks:
+      strict_required_status_checks_policy: true
+      required_check:
+        - context: "common-pull-request-checks / pre-commit-checks / Pre-commit Checks"
+        - context: "common-pull-request-checks / semgrep-scan / Semgrep Scan"
+        - context: "common-pull-request-checks / trivy-scan / Trivy Config Scan"
+        - context: "common-pull-request-checks / trivy-scan / Trivy FS Scan"
+        - context: "common-pull-request-checks / codeql-scan / CodeQL Scan"
+    copilot_code_review:
+      review_on_push: true
+      review_draft_pull_requests: false

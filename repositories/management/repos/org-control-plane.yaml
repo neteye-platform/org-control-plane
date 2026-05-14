@@ -6,3 +6,5 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+branch_ruleset:
+  bypass_actors: []
