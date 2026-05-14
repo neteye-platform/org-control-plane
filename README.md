@@ -167,8 +167,12 @@ Branch names in `conditions.ref_name.include` and
 `main`. The module expands them to `refs/heads/main`. Fully qualified
 refs and GitHub ruleset tokens such as `~DEFAULT_BRANCH` are preserved.
 
-`bypass_actors` is additive by default from org defaults plus
-`extra_bypass_actors` at the category or repository tier:
+`bypass_actors` is inherited by default from the highest tier that
+sets it. A category-level `bypass_actors` replaces the org default;
+a repo-level `bypass_actors` replaces both category and org values.
+
+Use `extra_bypass_actors` only when you want to keep the inherited
+`bypass_actors` list and add more actors at the category or repo tier:
 
 ```yaml
 branch_ruleset:
@@ -178,9 +182,9 @@ branch_ruleset:
       bypass_mode: pull_request
 ```
 
-Set `bypass_actors` explicitly at the category or repository tier
-when the inherited bypass list must be replaced instead of extended.
-Use an empty list to remove all bypass actors for that scope:
+Set `bypass_actors` explicitly when the inherited bypass list must be
+replaced instead of extended. Use an empty list to remove all bypass
+actors for that scope:
 
 ```yaml
 branch_ruleset:
