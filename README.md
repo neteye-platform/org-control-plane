@@ -144,7 +144,8 @@ branch_ruleset:
     required_status_checks:
       strict_required_status_checks_policy: true
       required_check:
-        - context: "common-pull-request-checks / pre-commit-checks / Pre-commit Checks"
+        - context: >-
+            common-pull-request-checks / pre-commit-checks / Pre-commit Checks
     copilot_code_review:
       review_on_push: true
       review_draft_pull_requests: false
