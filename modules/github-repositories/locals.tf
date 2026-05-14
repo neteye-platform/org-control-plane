@@ -21,7 +21,7 @@ locals {
   # One ruleset per repo.
   # - Scalar fields:  repo > category > org    (coalesce)
   # - Additive lists: concat all three tiers   (conditions include/exclude, required_check)
-  # - bypass_actors:  additive by default; full override when bypass_actors is set explicitly at repo or category level
+  # - bypass_actors:  full override when bypass_actors is set explicitly at repo or category level
   # - merge_queue:    highest priority tier wins entirely; omitted when not set anywhere
   ruleset_configs = {
     for repo_name in keys(local.repos) :
@@ -34,12 +34,12 @@ locals {
         try(local._repo_rs[repo_name].bypass_actors, null) != null
         ? local._repo_rs[repo_name].bypass_actors
         : try(local._cat_rs.bypass_actors, null) != null
-          ? local._cat_rs.bypass_actors
-          : distinct(concat(
-              local._org_rs.bypass_actors,
-              try(local._cat_rs.extra_bypass_actors, []),
-              try(local._repo_rs[repo_name].extra_bypass_actors, [])
-            ))
+        ? local._cat_rs.bypass_actors
+        : distinct(concat(
+          local._org_rs.bypass_actors,
+          try(local._cat_rs.extra_bypass_actors, []),
+          try(local._repo_rs[repo_name].extra_bypass_actors, [])
+        ))
       )
 
       conditions = {
@@ -68,6 +68,7 @@ locals {
         required_linear_history = try(coalesce(try(local._repo_rs[repo_name].rules.required_linear_history, null), try(local._cat_rs.rules.required_linear_history, null), try(local._org_rs.rules.required_linear_history, null)), null)
 
         pull_request = {
+          allowed_merge_methods             = coalesce(try(local._repo_rs[repo_name].rules.pull_request.allowed_merge_methods, null), try(local._cat_rs.rules.pull_request.allowed_merge_methods, null), local._org_rs.rules.pull_request.allowed_merge_methods)
           required_approving_review_count   = coalesce(try(local._repo_rs[repo_name].rules.pull_request.required_approving_review_count, null), try(local._cat_rs.rules.pull_request.required_approving_review_count, null), local._org_rs.rules.pull_request.required_approving_review_count)
           dismiss_stale_reviews_on_push     = coalesce(try(local._repo_rs[repo_name].rules.pull_request.dismiss_stale_reviews_on_push, null), try(local._cat_rs.rules.pull_request.dismiss_stale_reviews_on_push, null), local._org_rs.rules.pull_request.dismiss_stale_reviews_on_push)
           require_last_push_approval        = coalesce(try(local._repo_rs[repo_name].rules.pull_request.require_last_push_approval, null), try(local._cat_rs.rules.pull_request.require_last_push_approval, null), local._org_rs.rules.pull_request.require_last_push_approval)

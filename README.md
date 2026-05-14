@@ -19,7 +19,7 @@ request, planned automatically in CI, and applied on merge.
 .
 ├── root.hcl                         # Remote state + provider
 ├── org-settings/                    # Org-level settings
-│   ├── settings.yaml
+│   ├── settings.yaml                # Settings values
 │   └── terragrunt.hcl
 ├── teams/                           # Team management
 │   ├── terragrunt.hcl
@@ -38,7 +38,10 @@ request, planned automatically in CI, and applied on merge.
 │   └── github-teams/
 └── .github/workflows/
     ├── plan.yaml                    # Plan on PR
-    └── apply.yaml                   # Apply on merge
+    ├── apply.yaml                   # Apply on merge
+    ├── plan-core.yaml               # Reusable plan job
+    ├── apply-core.yaml              # Reusable apply job
+    └── generate-matrix.yaml         # Discovers Terragrunt units
 ```
 
 Each top-level directory that contains a `terragrunt.hcl`
@@ -61,7 +64,7 @@ GitHub Actions authenticates via a
 [GitHub App](https://docs.github.com/en/apps).
 S3 remote state uses AWS credentials.
 The required variables are configured as repository
-secrets and variables
+secrets and variables.
 
 ### Local
 
@@ -94,12 +97,9 @@ Create a YAML file in
 `repositories/<category>/repos/`:
 
 ```yaml
-# repositories/websites/repos/my-website.yaml
 name: my-website
 description: My website repository.
 homepage_url: https://example.com
-is_template: false
-archived: false
 ```
 
 Only fields that differ from the defaults are required.
@@ -115,18 +115,30 @@ To create a new repository **category**, add a directory
 under `repositories/` with its own `terragrunt.hcl`
 (copy from an existing category such as `websites/`).
 
+See the [`github_repository`][tf-repo] resource docs
+for the full list of available fields.
+
+[tf-repo]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository
+
 ### Branch Rulesets
 
-Repository branch protection is managed with GitHub rulesets
-through the `branch_ruleset` YAML block. The org-wide default
-ruleset is declared in `repositories/_defaults.yaml` and applies
-to every repository unless a category or repository overrides it.
+Repository branch protection is managed with
+[GitHub rulesets][tf-ruleset] through the `branch_ruleset`
+YAML block. The org-wide default ruleset is declared in
+`repositories/_defaults.yaml` and applies to every
+repository unless a category or repository overrides it.
+
+[tf-ruleset]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset
 
 ```yaml
 branch_ruleset:
   name: main-branch-protection
   target: branch
   enforcement: active
+  bypass_actors:
+    - actor_id: 0
+      actor_type: OrganizationAdmin
+      bypass_mode: pull_request
   conditions:
     ref_name:
       include:
@@ -136,7 +148,10 @@ branch_ruleset:
     deletion: true
     non_fast_forward: true
     required_signatures: true
+    required_linear_history: true
     pull_request:
+      allowed_merge_methods:
+        - "squash"
       required_approving_review_count: 1
       dismiss_stale_reviews_on_push: true
       require_last_push_approval: true
@@ -150,31 +165,52 @@ branch_ruleset:
     copilot_code_review:
       review_on_push: true
       review_draft_pull_requests: false
+    merge_queue:
+      grouping_strategy: ALLGREEN
+      merge_method: SQUASH
+      check_response_timeout_minutes: 60
+      min_entries_to_merge: 1
+      max_entries_to_merge: 5
+      min_entries_to_merge_wait_minutes: 5
+      max_entries_to_build: 5
 ```
 
-Scalar fields use normal precedence: repository overrides
-category, category overrides org defaults. This applies to fields
-such as `name`, `target`, `enforcement`, individual rule booleans,
-pull request settings, required status check settings, and Copilot
-review settings.
+#### Merge behaviour
 
-The following lists are additive across all tiers and are de-duplicated:
+Scalar fields use normal precedence: repository overrides
+category, category overrides org defaults. This applies to
+fields such as `name`, `target`, `enforcement`, individual
+rule booleans, pull request settings, required status check
+settings, and Copilot review settings.
+
+The following lists are **additive** across all tiers and
+are de-duplicated:
 
 - `conditions.ref_name.include`
 - `conditions.ref_name.exclude`
 - `rules.required_status_checks.required_check`
 
 Branch names in `conditions.ref_name.include` and
-`conditions.ref_name.exclude` may be written as short names such as
-`main`. The module expands them to `refs/heads/main`. Fully qualified
-refs and GitHub ruleset tokens such as `~DEFAULT_BRANCH` are preserved.
+`conditions.ref_name.exclude` may be written as short
+names such as `main`. The module expands them to
+`refs/heads/main`. Fully qualified refs and GitHub ruleset
+tokens such as `~DEFAULT_BRANCH` are preserved.
 
-`bypass_actors` is inherited by default from the highest tier that
-sets it. A category-level `bypass_actors` replaces the org default;
-a repo-level `bypass_actors` replaces both category and org values.
+`rules.merge_queue`, when configured, is not merged
+field-by-field. The highest-priority tier that defines it
+wins entirely: repository, then category, then org
+defaults.
 
-Use `extra_bypass_actors` only when you want to keep the inherited
-`bypass_actors` list and add more actors at the category or repo tier:
+#### Bypass actors
+
+`bypass_actors` is inherited by default from the highest
+tier that sets it. A category-level `bypass_actors`
+replaces the org default; a repo-level `bypass_actors`
+replaces both category and org values.
+
+Use `extra_bypass_actors` to keep the inherited
+`bypass_actors` list and add more actors at the category
+or repo tier:
 
 ```yaml
 branch_ruleset:
@@ -184,39 +220,51 @@ branch_ruleset:
       bypass_mode: pull_request
 ```
 
-Set `bypass_actors` explicitly when the inherited bypass list must be
-replaced instead of extended. Use an empty list to remove all bypass
-actors for that scope:
+Set `bypass_actors` explicitly when the inherited bypass
+list must be replaced instead of extended. Use an empty
+list to remove all bypass actors for that scope:
 
 ```yaml
 branch_ruleset:
   bypass_actors: []
 ```
 
-`rules.merge_queue`, when configured, is not merged field-by-field.
-The highest-priority tier that defines it wins entirely: repository,
-then category, then org defaults.
-
 ### Adding a Team
 
 Create a YAML file in `teams/teams/`:
 
 ```yaml
-# teams/teams/my-team.yaml
 name: my-team
 description: My team description.
 privacy: closed
 notification_setting: notifications_enabled
+members:
+  - username: octocat
+    role: maintainer
+  - username: hubot
+    role: member
 ```
+
+See the [`github_team`][tf-team] and
+[`github_team_membership`][tf-membership] resource docs
+for available fields.
+
+[tf-team]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team
+[tf-membership]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team_membership
 
 ### Organization Settings
 
 Org-level settings are declared in
-`org-settings/settings.yaml`. Edit the YAML file
-to change settings such as default repository permissions,
-security scanning defaults, and member privileges.
-`billing_email` is injected at plan/apply time from the
+`org-settings/settings.yaml`. Edit the YAML file to change
+settings such as default repository permissions, security
+scanning defaults, and member privileges. `billing_email`
+is injected at plan/apply time from the
 `TF_VAR_billing_email` environment variable.
+
+See the [`github_organization_settings`][tf-org] resource
+docs for the full list of available fields.
+
+[tf-org]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/organization_settings
 
 ## CI/CD Workflows
 
@@ -229,6 +277,10 @@ security scanning defaults, and member privileges.
 - **Terraform Apply** (`apply.yaml`) — triggers on push
   to `main`. Applies each unit to the production
   environment.
+
+Both plan and apply workflows use `generate-matrix.yaml`
+to discover Terragrunt units automatically from the
+directory structure.
 
 [rc]: https://github.com/neteye-platform/repo-commons
 
