@@ -42,13 +42,13 @@ jobs:
           echo "value=$(cat .terraform-version)" >>"$GITHUB_OUTPUT"
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ steps.tf_version.outputs.value }}
 
       # NOTE: Do not specify permissions for this GitHub App token since we want all permissions granted to this app.
       - name: Generate GitHub App token for GitHub authentication
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: generate-token-auth
         with:
           app-id: ${{ inputs.neteye_manager_app_id }}
@@ -62,7 +62,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terragrunt Apply
-        uses: gruntwork-io/terragrunt-action@ad66bd184abd991249047d1f61bce1f29aaed2a6 # v3.3.0
+        uses: gruntwork-io/terragrunt-action@4ed5b7344c80315e5357f28f36159fc980bc2d5a # v3.4.0
         env:
           TF_VAR_github_org: ${{ github.repository_owner }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
