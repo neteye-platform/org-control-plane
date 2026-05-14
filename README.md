@@ -114,6 +114,88 @@ To create a new repository **category**, add a directory
 under `repositories/` with its own `terragrunt.hcl`
 (copy from an existing category such as `websites/`).
 
+### Branch Rulesets
+
+Repository branch protection is managed with GitHub rulesets
+through the `branch_ruleset` YAML block. The org-wide default
+ruleset is declared in `repositories/_defaults.yaml` and applies
+to every repository unless a category or repository overrides it.
+
+```yaml
+branch_ruleset:
+  name: main-branch-protection
+  target: branch
+  enforcement: active
+  conditions:
+    ref_name:
+      include:
+        - main
+      exclude: []
+  rules:
+    deletion: true
+    non_fast_forward: true
+    required_signatures: true
+    pull_request:
+      required_approving_review_count: 1
+      dismiss_stale_reviews_on_push: true
+      require_last_push_approval: true
+      require_code_owner_review: true
+      required_review_thread_resolution: true
+    required_status_checks:
+      strict_required_status_checks_policy: true
+      required_check:
+        - context: >-
+            common-pull-request-checks / pre-commit-checks / Pre-commit Checks
+    copilot_code_review:
+      review_on_push: true
+      review_draft_pull_requests: false
+```
+
+Scalar fields use normal precedence: repository overrides
+category, category overrides org defaults. This applies to fields
+such as `name`, `target`, `enforcement`, individual rule booleans,
+pull request settings, required status check settings, and Copilot
+review settings.
+
+The following lists are additive across all tiers and are de-duplicated:
+
+- `conditions.ref_name.include`
+- `conditions.ref_name.exclude`
+- `rules.required_status_checks.required_check`
+
+Branch names in `conditions.ref_name.include` and
+`conditions.ref_name.exclude` may be written as short names such as
+`main`. The module expands them to `refs/heads/main`. Fully qualified
+refs and GitHub ruleset tokens such as `~DEFAULT_BRANCH` are preserved.
+
+`bypass_actors` is inherited by default from the highest tier that
+sets it. A category-level `bypass_actors` replaces the org default;
+a repo-level `bypass_actors` replaces both category and org values.
+
+Use `extra_bypass_actors` only when you want to keep the inherited
+`bypass_actors` list and add more actors at the category or repo tier:
+
+```yaml
+branch_ruleset:
+  extra_bypass_actors:
+    - actor_id: 5
+      actor_type: RepositoryRole
+      bypass_mode: pull_request
+```
+
+Set `bypass_actors` explicitly when the inherited bypass list must be
+replaced instead of extended. Use an empty list to remove all bypass
+actors for that scope:
+
+```yaml
+branch_ruleset:
+  bypass_actors: []
+```
+
+`rules.merge_queue`, when configured, is not merged field-by-field.
+The highest-priority tier that defines it wins entirely: repository,
+then category, then org defaults.
+
 ### Adding a Team
 
 Create a YAML file in `teams/teams/`:
