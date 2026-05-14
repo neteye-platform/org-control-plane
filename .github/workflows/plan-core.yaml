@@ -31,8 +31,65 @@ on:
         required: false
 
 jobs:
+  cleanup-plan-comments:
+    name: Cleanup old plan comments
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+    steps:
+      - name: Generate GitHub App token for commenting on PRs
+        if: inputs.neteye_app_id != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: generate-token-comment
+        with:
+          app-id: ${{ inputs.neteye_app_id }}
+          private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
+
+      - name: Generate GitHub App token (fallback)
+        if: inputs.neteye_app_id == ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: generate-token-fallback
+        with:
+          app-id: ${{ inputs.neteye_manager_app_id }}
+          private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+
+      - name: Delete previous plan comments
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          APP_ID: ${{ inputs.neteye_app_id || inputs.neteye_manager_app_id }}
+        with:
+          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-fallback.outputs.token }}
+          script: |
+            const appId = Number(process.env.APP_ID);
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              }
+            );
+
+            const stale = comments.filter(
+              (c) => c.performed_via_github_app?.id === appId && c.body.trimStart().startsWith('<details')
+            );
+
+            core.info(`Found ${stale.length} previous plan comment(s)`);
+
+            for (const c of stale) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: c.id,
+              });
+              core.info(`Deleted comment ${c.id}`);
+            }
+
   terraform-plan:
     name: Terragrunt Plan
+    needs: cleanup-plan-comments
     runs-on: ubuntu-latest
     permissions:
       contents: read
