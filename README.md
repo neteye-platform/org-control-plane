@@ -19,6 +19,7 @@ request, planned automatically in CI, and applied on merge.
 .
 ├── root.hcl                         # Remote state + provider
 ├── org-settings/                    # Org-level settings
+│   ├── settings.yaml
 │   └── terragrunt.hcl
 ├── teams/                           # Team management
 │   ├── terragrunt.hcl
@@ -211,9 +212,11 @@ notification_setting: notifications_enabled
 ### Organization Settings
 
 Org-level settings are declared in
-`org-settings/terragrunt.hcl`. Edit the `inputs` block
+`org-settings/settings.yaml`. Edit the YAML file
 to change settings such as default repository permissions,
 security scanning defaults, and member privileges.
+`billing_email` is injected at plan/apply time from the
+`TF_VAR_billing_email` environment variable.
 
 ## CI/CD Workflows
 

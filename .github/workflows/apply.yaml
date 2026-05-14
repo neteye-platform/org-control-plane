@@ -3,7 +3,7 @@ name: Terraform Apply
 on:
   push:
     branches:
-      - main
+      - "main"
 
 concurrency:
   group: terraform-apply
@@ -17,6 +17,8 @@ jobs:
 
   terraform-apply:
     needs: generate-matrix
+    permissions:
+      contents: read
     uses: ./.github/workflows/apply-core.yaml
     with:
       matrix: ${{ needs.generate-matrix.outputs.matrix }}

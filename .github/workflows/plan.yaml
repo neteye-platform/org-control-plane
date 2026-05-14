@@ -13,6 +13,8 @@ jobs:
 
   terraform-plan:
     needs: generate-matrix
+    permissions:
+      contents: read
     uses: ./.github/workflows/plan-core.yaml
     with:
       matrix: ${{ needs.generate-matrix.outputs.matrix }}
