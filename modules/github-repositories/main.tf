@@ -80,6 +80,7 @@ resource "github_repository_ruleset" "main_protection" {
     required_linear_history = each.value.rules.required_linear_history
 
     pull_request {
+      allowed_merge_methods             = each.value.rules.pull_request.allowed_merge_methods
       required_approving_review_count   = each.value.rules.pull_request.required_approving_review_count
       dismiss_stale_reviews_on_push     = each.value.rules.pull_request.dismiss_stale_reviews_on_push
       require_last_push_approval        = each.value.rules.pull_request.require_last_push_approval

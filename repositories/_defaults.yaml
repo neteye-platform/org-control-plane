@@ -18,22 +18,26 @@ branch_ruleset:
   target: branch
   enforcement: active
   bypass_actors:
+    - actor_id: 0
+      actor_type: OrganizationAdmin
+      bypass_mode: pull_request
     - actor_id: 5
       actor_type: RepositoryRole
-      bypass_mode: pull_request
-    - actor_id: 1
-      actor_type: OrganizationAdmin
       bypass_mode: pull_request
   conditions:
     ref_name:
       include:
         - "main"
+        - "maint-*"
       exclude: []
   rules:
     deletion: true
     non_fast_forward: true
     required_signatures: true
+    required_linear_history: true
     pull_request:
+      allowed_merge_methods:
+        - "squash"
       required_approving_review_count: 1
       dismiss_stale_reviews_on_push: true
       require_last_push_approval: true
