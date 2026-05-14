@@ -123,65 +123,72 @@ for the full list of available fields.
 ### Branch Rulesets
 
 Repository branch protection is managed with
-[GitHub rulesets][tf-ruleset] through the `branch_ruleset`
-YAML block. The org-wide default ruleset is declared in
-`repositories/_defaults.yaml` and applies to every
-repository unless a category or repository overrides it.
+[GitHub rulesets][tf-ruleset] through the `branch_rulesets`
+YAML map. Each key is the ruleset name. The org-wide
+defaults are declared in `repositories/_defaults.yaml`
+and apply to every repository. Categories and individual
+repositories can override existing rulesets or define
+additional ones.
 
 [tf-ruleset]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset
 
 ```yaml
-branch_ruleset:
-  name: main-branch-protection
-  target: branch
-  enforcement: active
-  bypass_actors:
-    - actor_id: 0
-      actor_type: OrganizationAdmin
-      bypass_mode: pull_request
-  conditions:
-    ref_name:
-      include:
-        - main
-      exclude: []
-  rules:
-    deletion: true
-    non_fast_forward: true
-    required_signatures: true
-    required_linear_history: true
-    pull_request:
-      allowed_merge_methods:
-        - "squash"
-      required_approving_review_count: 1
-      dismiss_stale_reviews_on_push: true
-      require_last_push_approval: true
-      require_code_owner_review: true
-      required_review_thread_resolution: true
-    required_status_checks:
-      strict_required_status_checks_policy: true
-      required_check:
-        - context: >-
-            common-pull-request-checks / pre-commit-checks / Pre-commit Checks
-    copilot_code_review:
-      review_on_push: true
-      review_draft_pull_requests: false
-    merge_queue:
-      grouping_strategy: ALLGREEN
-      merge_method: SQUASH
-      check_response_timeout_minutes: 60
-      min_entries_to_merge: 1
-      max_entries_to_merge: 5
-      min_entries_to_merge_wait_minutes: 5
-      max_entries_to_build: 5
+branch_rulesets:
+  main-branch-protection:
+    target: branch
+    enforcement: active
+    bypass_actors:
+      - actor_id: 0
+        actor_type: OrganizationAdmin
+        bypass_mode: pull_request
+    conditions:
+      ref_name:
+        include:
+          - main
+        exclude: []
+    rules:
+      deletion: true
+      non_fast_forward: true
+      required_signatures: true
+      required_linear_history: true
+      pull_request:
+        allowed_merge_methods:
+          - "squash"
+        required_approving_review_count: 1
+        dismiss_stale_reviews_on_push: true
+        require_last_push_approval: true
+        require_code_owner_review: true
+        required_review_thread_resolution: true
+      required_status_checks:
+        strict_required_status_checks_policy: true
+        required_check:
+          - context: >-
+              common-pull-request-checks / pre-commit-checks / Pre-commit Checks
+      copilot_code_review:
+        review_on_push: true
+        review_draft_pull_requests: false
+      merge_queue:
+        grouping_strategy: ALLGREEN
+        merge_method: SQUASH
+        check_response_timeout_minutes: 60
+        min_entries_to_merge: 1
+        max_entries_to_merge: 5
+        min_entries_to_merge_wait_minutes: 5
+        max_entries_to_build: 5
 ```
 
 #### Merge behaviour
 
 Scalar fields use normal precedence: repository overrides
 category, category overrides org defaults. This applies to
-fields such as `name`, `target`, `enforcement`, individual
-rule booleans, pull request settings, required status check
+fields such as `target`, `enforcement`, individual rule
+booleans, pull request settings, required status check
 settings, and Copilot review settings.
+
+Rulesets are matched by name across tiers. A category or
+repository that defines a ruleset with the same key as an
+org default overrides its fields. A new key adds a
+ruleset that only applies to that category or repository.
 
 The following lists are **additive** across all tiers and
 are de-duplicated:
@@ -213,11 +220,12 @@ Use `extra_bypass_actors` to keep the inherited
 or repo tier:
 
 ```yaml
-branch_ruleset:
-  extra_bypass_actors:
-    - actor_id: 5
-      actor_type: RepositoryRole
-      bypass_mode: pull_request
+branch_rulesets:
+  main-branch-protection:
+    extra_bypass_actors:
+      - actor_id: 5
+        actor_type: RepositoryRole
+        bypass_mode: pull_request
 ```
 
 Set `bypass_actors` explicitly when the inherited bypass
@@ -225,8 +233,9 @@ list must be replaced instead of extended. Use an empty
 list to remove all bypass actors for that scope:
 
 ```yaml
-branch_ruleset:
-  bypass_actors: []
+branch_rulesets:
+  main-branch-protection:
+    bypass_actors: []
 ```
 
 ### Adding a Team
