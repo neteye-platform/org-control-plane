@@ -75,10 +75,12 @@ resource "github_repository_ruleset" "rulesets" {
   }
 
   rules {
+    creation                = each.value.rules.creation
     deletion                = each.value.rules.deletion
+    update                  = each.value.rules.update
     non_fast_forward        = each.value.rules.non_fast_forward
-    required_signatures     = each.value.rules.required_signatures
     required_linear_history = each.value.rules.required_linear_history
+    required_signatures     = each.value.rules.required_signatures
 
     # Optional rule blocks: only emitted when the ruleset actually configures them
     dynamic "pull_request" {
@@ -109,11 +111,17 @@ resource "github_repository_ruleset" "rulesets" {
       }
     }
 
-    dynamic "copilot_code_review" {
-      for_each = each.value.rules._has_copilot_review ? [each.value.rules.copilot_code_review] : []
+    dynamic "required_code_scanning" {
+      for_each = each.value.rules._has_code_scanning ? [each.value.rules.required_code_scanning] : []
       content {
-        review_on_push             = copilot_code_review.value.review_on_push
-        review_draft_pull_requests = copilot_code_review.value.review_draft_pull_requests
+        dynamic "required_code_scanning_tool" {
+          for_each = required_code_scanning.value.required_code_scanning_tool
+          content {
+            tool                      = required_code_scanning_tool.value.tool
+            alerts_threshold          = try(required_code_scanning_tool.value.alerts_threshold, "none")
+            security_alerts_threshold = try(required_code_scanning_tool.value.security_alerts_threshold, "none")
+          }
+        }
       }
     }
 
@@ -127,6 +135,14 @@ resource "github_repository_ruleset" "rulesets" {
         max_entries_to_merge              = try(merge_queue.value.max_entries_to_merge, 5)
         min_entries_to_merge_wait_minutes = try(merge_queue.value.min_entries_to_merge_wait_minutes, 5)
         max_entries_to_build              = try(merge_queue.value.max_entries_to_build, 5)
+      }
+    }
+
+    dynamic "copilot_code_review" {
+      for_each = each.value.rules._has_copilot_review ? [each.value.rules.copilot_code_review] : []
+      content {
+        review_on_push             = copilot_code_review.value.review_on_push
+        review_draft_pull_requests = copilot_code_review.value.review_draft_pull_requests
       }
     }
   }

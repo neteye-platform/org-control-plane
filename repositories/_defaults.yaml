@@ -27,30 +27,55 @@ branch_rulesets:
     conditions:
       ref_name:
         include:
-          - "main"
+          - "~DEFAULT_BRANCH"
           - "maint-*"
         exclude: []
     rules:
+      creation: false
+      update: false
       deletion: true
-      non_fast_forward: true
-      required_signatures: true
       required_linear_history: true
+      required_signatures: true
       pull_request:
-        allowed_merge_methods:
-          - "squash"
         required_approving_review_count: 1
         dismiss_stale_reviews_on_push: true
-        require_last_push_approval: true
         require_code_owner_review: true
+        require_last_push_approval: true
         required_review_thread_resolution: true
+        allowed_merge_methods:
+          - "squash"
       required_status_checks:
         strict_required_status_checks_policy: true
         required_check:
+          - context: "common-pull-request-checks / codeql-scan / CodeQL Scan"
           - context: "common-pull-request-checks / pre-commit-checks / Pre-commit Checks"
           - context: "common-pull-request-checks / semgrep-scan / Semgrep Scan"
           - context: "common-pull-request-checks / trivy-scan / Trivy Config Scan"
           - context: "common-pull-request-checks / trivy-scan / Trivy FS Scan"
-          - context: "common-pull-request-checks / codeql-scan / CodeQL Scan"
+      non_fast_forward: true
       copilot_code_review:
         review_on_push: true
         review_draft_pull_requests: false
+
+  main-tag-protection:
+    target: tag
+    enforcement: active
+    bypass_actors:
+      - actor_id: 0
+        actor_type: OrganizationAdmin
+        bypass_mode: always
+      - actor_id: 5
+        actor_type: RepositoryRole
+        bypass_mode: always
+    conditions:
+      ref_name:
+        include:
+          - "~ALL"
+        exclude: []
+    rules:
+      creation: false
+      update: true
+      deletion: true
+      required_linear_history: true
+      required_signatures: true
+      non_fast_forward: true

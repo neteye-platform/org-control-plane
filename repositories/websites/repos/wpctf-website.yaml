@@ -7,3 +7,9 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "E2E Tests"

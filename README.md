@@ -147,10 +147,12 @@ branch_rulesets:
           - main
         exclude: []
     rules:
+      creation: true
       deletion: true
+      update: true
       non_fast_forward: true
-      required_signatures: true
       required_linear_history: true
+      required_signatures: true
       pull_request:
         allowed_merge_methods:
           - "squash"
@@ -164,9 +166,11 @@ branch_rulesets:
         required_check:
           - context: >-
               common-pull-request-checks / pre-commit-checks / Pre-commit Checks
-      copilot_code_review:
-        review_on_push: true
-        review_draft_pull_requests: false
+      required_code_scanning:
+        required_code_scanning_tool:
+          - tool: CodeQL
+            alerts_threshold: errors
+            security_alerts_threshold: critical
       merge_queue:
         grouping_strategy: ALLGREEN
         merge_method: SQUASH
@@ -175,6 +179,9 @@ branch_rulesets:
         max_entries_to_merge: 5
         min_entries_to_merge_wait_minutes: 5
         max_entries_to_build: 5
+      copilot_code_review:
+        review_on_push: true
+        review_draft_pull_requests: false
 ```
 
 #### Merge behaviour
@@ -196,6 +203,11 @@ are de-duplicated:
 - `conditions.ref_name.include`
 - `conditions.ref_name.exclude`
 - `rules.required_status_checks.required_check`
+
+`rules.required_code_scanning.required_code_scanning_tool`
+is merged by tool name with repo > category > org
+precedence. A lower tier can override thresholds for an
+inherited tool or add new tools.
 
 Branch names in `conditions.ref_name.include` and
 `conditions.ref_name.exclude` may be written as short
