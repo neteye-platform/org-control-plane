@@ -7,6 +7,7 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
 branch_rulesets:
   main-branch-protection:
     rules:
