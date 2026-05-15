@@ -84,12 +84,15 @@ locals {
       }
 
       rules = {
+        creation                = try(coalesce(try(pair.repo_rs.rules.creation, null), try(pair.cat_rs.rules.creation, null), try(pair.org_rs.rules.creation, null)), null)
         deletion                = try(coalesce(try(pair.repo_rs.rules.deletion, null), try(pair.cat_rs.rules.deletion, null), try(pair.org_rs.rules.deletion, null)), null)
+        update                  = try(coalesce(try(pair.repo_rs.rules.update, null), try(pair.cat_rs.rules.update, null), try(pair.org_rs.rules.update, null)), null)
         non_fast_forward        = try(coalesce(try(pair.repo_rs.rules.non_fast_forward, null), try(pair.cat_rs.rules.non_fast_forward, null), try(pair.org_rs.rules.non_fast_forward, null)), null)
-        required_signatures     = try(coalesce(try(pair.repo_rs.rules.required_signatures, null), try(pair.cat_rs.rules.required_signatures, null), try(pair.org_rs.rules.required_signatures, null)), null)
         required_linear_history = try(coalesce(try(pair.repo_rs.rules.required_linear_history, null), try(pair.cat_rs.rules.required_linear_history, null), try(pair.org_rs.rules.required_linear_history, null)), null)
+        required_signatures     = try(coalesce(try(pair.repo_rs.rules.required_signatures, null), try(pair.cat_rs.rules.required_signatures, null), try(pair.org_rs.rules.required_signatures, null)), null)
 
         _has_pull_request   = try(pair.org_rs.rules.pull_request, null) != null || try(pair.cat_rs.rules.pull_request, null) != null || try(pair.repo_rs.rules.pull_request, null) != null
+        _has_code_scanning  = try(pair.org_rs.rules.required_code_scanning, null) != null || try(pair.cat_rs.rules.required_code_scanning, null) != null || try(pair.repo_rs.rules.required_code_scanning, null) != null
         _has_copilot_review = try(pair.org_rs.rules.copilot_code_review, null) != null || try(pair.cat_rs.rules.copilot_code_review, null) != null || try(pair.repo_rs.rules.copilot_code_review, null) != null
 
         pull_request = {
@@ -111,9 +114,12 @@ locals {
           ))
         }
 
-        copilot_code_review = {
-          review_on_push             = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_on_push, null), try(pair.cat_rs.rules.copilot_code_review.review_on_push, null), try(pair.org_rs.rules.copilot_code_review.review_on_push, null)), null)
-          review_draft_pull_requests = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.cat_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.org_rs.rules.copilot_code_review.review_draft_pull_requests, null)), null)
+        required_code_scanning = {
+          required_code_scanning_tool = values(merge(
+            { for tool in try(pair.org_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool },
+            { for tool in try(pair.cat_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool },
+            { for tool in try(pair.repo_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool }
+          ))
         }
 
         merge_queue = try(coalesce(
@@ -121,6 +127,11 @@ locals {
           try(pair.cat_rs.rules.merge_queue, null),
           try(pair.org_rs.rules.merge_queue, null)
         ), null)
+
+        copilot_code_review = {
+          review_on_push             = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_on_push, null), try(pair.cat_rs.rules.copilot_code_review.review_on_push, null), try(pair.org_rs.rules.copilot_code_review.review_on_push, null)), null)
+          review_draft_pull_requests = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.cat_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.org_rs.rules.copilot_code_review.review_draft_pull_requests, null)), null)
+        }
       }
     }
   }

@@ -6,3 +6,12 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+branch_rulesets:
+  main-branch-protection:
+    bypass_actors: []
+    rules:
+      pull_request:
+        required_approving_review_count: 3
+      required_status_checks:
+        required_check:
+          - context: "Terragrunt Plan Success"
