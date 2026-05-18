@@ -15,7 +15,7 @@ allow_update_branch: true
 
 team_access:
   - team: rd-developers
-    permission: admin
+    permission: push
 
 branch_rulesets:
   main-branch-protection:
