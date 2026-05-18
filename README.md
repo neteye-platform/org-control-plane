@@ -120,6 +120,42 @@ for the full list of available fields.
 
 [tf-repo]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository
 
+### Team Access
+
+Repository team permissions are managed through the `team_access` YAML list.
+Each entry specifies a team slug and one of the GitHub permission levels:
+`pull` (read), `triage`, `push` (write), `maintain`, or `admin`.
+
+The org-wide default in `repositories/_defaults.yaml` applies to every
+repository:
+
+```yaml
+team_access:
+  - team: rd-developers
+    permission: push
+```
+
+Categories and individual repositories can override a team's permission or
+add new teams. Entries are matched by team slug — the most specific tier wins
+for a given slug, and slugs not present in lower tiers are inherited:
+
+```yaml
+# Elevate rd-developers to maintain for a specific repo, and add an extra team
+team_access:
+  - team: rd-developers
+    permission: maintain
+  - team: my-extra-team
+    permission: push
+```
+
+To reduce access, set a lower permission for the same slug:
+
+```yaml
+team_access:
+  - team: rd-developers
+    permission: pull
+```
+
 ### Branch Rulesets
 
 Repository branch protection is managed with
