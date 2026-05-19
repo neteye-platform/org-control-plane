@@ -50,6 +50,17 @@ resource "github_repository" "repos" {
   }
 }
 
+# One team-access entry per (repo, team) pair; keyed as "repo/team-slug"
+resource "github_team_repository" "access" {
+  for_each = local.team_access_configs
+
+  team_id    = each.value.team
+  repository = github_repository.repos[each.value.repo_name].name
+  permission = each.value.permission
+
+  depends_on = [github_repository.repos]
+}
+
 # One ruleset resource per (repo, ruleset_name) pair; keyed as "repo/ruleset"
 resource "github_repository_ruleset" "rulesets" {
   for_each    = local.ruleset_configs

@@ -13,6 +13,10 @@ delete_branch_on_merge: true
 auto_init: false
 allow_update_branch: true
 
+team_access:
+  - team: rd-developers
+    permission: push
+
 branch_rulesets:
   main-branch-protection:
     target: branch

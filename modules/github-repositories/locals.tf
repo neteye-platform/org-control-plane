@@ -13,6 +13,24 @@ locals {
     )
   }
 
+  # Build one team-access entry per (repo, team slug).
+  # Merge strategy: union across tiers keyed by team slug; most specific tier wins (repo > category > org).
+  team_access_configs = {
+    for pair in flatten([
+      for repo_name in keys(local.repos) : [
+        for slug, entry in merge(
+          { for t in try(var.org_defaults.team_access, []) : t.team => t },
+          { for t in try(var.category_defaults.team_access, []) : t.team => t },
+          { for t in try(local.repo_yamls[repo_name].team_access, []) : t.team => t }
+        ) : {
+          repo_name  = repo_name
+          team       = slug
+          permission = entry.permission
+        }
+      ]
+    ]) : "${pair.repo_name}/${pair.team}" => pair
+  }
+
   # Shorthand references to each tier's branch_rulesets map
   _org_rs_map  = try(var.org_defaults.branch_rulesets, {})
   _cat_rs_map  = try(var.category_defaults.branch_rulesets, {})
