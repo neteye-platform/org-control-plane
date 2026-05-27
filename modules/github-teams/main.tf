@@ -6,10 +6,11 @@ terraform {
 resource "github_team" "teams" {
   for_each = local.teams
 
-  name           = each.value.name
-  description    = each.value.description
-  privacy        = each.value.privacy
-  parent_team_id = lookup(each.value, "parent_team_id", null)
+  name                 = each.value.name
+  description          = each.value.description
+  privacy              = each.value.privacy
+  parent_team_id       = lookup(each.value, "parent_team_id", null)
+  notification_setting = each.value.notification_setting
 
   # Prevent destruction of teams to avoid accidental deletion of critical access groups
   lifecycle {
