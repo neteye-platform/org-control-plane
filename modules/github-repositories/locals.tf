@@ -14,15 +14,34 @@ locals {
   }
 
   # Build one team-access entry per (repo, team slug).
-  # Merge strategy: union across tiers keyed by team slug; most specific tier wins (repo > category > org).
+  # Override strategy: the most specific tier that defines `team_access` wins
+  # entirely (repo > category > org). Lower tiers are NOT merged in.
+  # Use `extra_team_access` at the category or repo tier to keep the inherited
+  # list and add/override individual entries by team slug.
   team_access_configs = {
     for pair in flatten([
       for repo_name in keys(local.repos) : [
         for slug, entry in merge(
-          { for t in try(var.org_defaults.team_access, []) : t.team => t },
-          { for t in try(var.category_defaults.team_access, []) : t.team => t },
-          { for t in try(local.repo_yamls[repo_name].team_access, []) : t.team => t }
-        ) : {
+          # Base list: highest tier that explicitly sets team_access wins.
+          {
+            for t in(
+              try(local.repo_yamls[repo_name].team_access, null) != null
+              ? local.repo_yamls[repo_name].team_access
+              : try(var.category_defaults.team_access, null) != null
+              ? var.category_defaults.team_access
+              : try(var.org_defaults.team_access, [])
+            ) : t.team => t
+          },
+          # Additive overrides keyed by team slug (category then repo).
+          {
+            for t in(
+              try(local.repo_yamls[repo_name].team_access, null) == null
+              ? try(var.category_defaults.extra_team_access, [])
+              : []
+            ) : t.team => t
+          },
+          { for t in try(local.repo_yamls[repo_name].extra_team_access, []) : t.team => t }
+          ) : {
           repo_name  = repo_name
           team       = slug
           permission = entry.permission
@@ -150,6 +169,7 @@ locals {
           review_on_push             = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_on_push, null), try(pair.cat_rs.rules.copilot_code_review.review_on_push, null), try(pair.org_rs.rules.copilot_code_review.review_on_push, null)), null)
           review_draft_pull_requests = try(coalesce(try(pair.repo_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.cat_rs.rules.copilot_code_review.review_draft_pull_requests, null), try(pair.org_rs.rules.copilot_code_review.review_draft_pull_requests, null)), null)
         }
+
       }
     }
   }

@@ -135,25 +135,29 @@ team_access:
     permission: push
 ```
 
-Categories and individual repositories can override a team's permission or
-add new teams. Entries are matched by team slug — the most specific tier wins
-for a given slug, and slugs not present in lower tiers are inherited:
+`team_access` is inherited by default from the highest tier that sets it.
+A category-level `team_access` replaces the org default; a repo-level
+`team_access` replaces both category and org values.
+
+Use `extra_team_access` to keep the inherited `team_access` list and add
+or override entries (matched by team slug) at the category or repo tier:
 
 ```yaml
-# Elevate rd-developers to maintain for a specific repo, and add an extra team
-team_access:
+# Keep inherited teams and grant rd-developers maintain access,
+# plus add a new team for this repo only.
+extra_team_access:
   - team: rd-developers
     permission: maintain
   - team: my-extra-team
     permission: push
 ```
 
-To reduce access, set a lower permission for the same slug:
+Set `team_access` explicitly when the inherited list must be replaced
+instead of extended. Use an empty list to remove all team access for
+that scope:
 
 ```yaml
-team_access:
-  - team: rd-developers
-    permission: pull
+team_access: []
 ```
 
 ### Branch Rulesets
