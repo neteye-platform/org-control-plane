@@ -58,7 +58,7 @@ branch_rulesets:
           - context: "common-pull-request-checks / trivy-scan / Trivy FS Scan"
       non_fast_forward: true
       copilot_code_review:
-        review_on_push: true
+        review_on_push: false
         review_draft_pull_requests: false
 
   main-tag-protection:
