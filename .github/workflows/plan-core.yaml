@@ -49,17 +49,18 @@ jobs:
       - name: Generate GitHub App token (fallback)
         if: inputs.neteye_app_id == ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        id: generate-token-fallback
+        id: generate-token-comment-fallback
         with:
           app-id: ${{ inputs.neteye_manager_app_id }}
           private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
 
       - name: Delete previous plan comments
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           APP_ID: ${{ inputs.neteye_app_id || inputs.neteye_manager_app_id }}
         with:
-          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-fallback.outputs.token }}
+          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-comment-fallback.outputs.token }}
           script: |
             const appId = Number(process.env.APP_ID);
 
