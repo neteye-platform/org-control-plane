@@ -262,14 +262,20 @@ defaults.
 
 #### Bypass actors
 
-`bypass_actors` is inherited by default from the highest
-tier that sets it. A category-level `bypass_actors`
-replaces the org default; a repo-level `bypass_actors`
-replaces both category and org values.
+`bypass_actors` is taken from the **first** tier that
+defines it, exclusively: repository overrides category,
+category overrides org defaults. Use an empty list to
+remove all bypass actors for that scope:
 
-Use `extra_bypass_actors` to keep the inherited
-`bypass_actors` list and add more actors at the category
-or repo tier:
+```yaml
+branch_rulesets:
+  main-branch-protection:
+    bypass_actors: []
+```
+
+`extra_bypass_actors` from **all** tiers (org, category,
+repo) are **always** appended to the final list, regardless
+of which tier provided the base `bypass_actors`:
 
 ```yaml
 branch_rulesets:
@@ -280,15 +286,9 @@ branch_rulesets:
         bypass_mode: pull_request
 ```
 
-Set `bypass_actors` explicitly when the inherited bypass
-list must be replaced instead of extended. Use an empty
-list to remove all bypass actors for that scope:
-
-```yaml
-branch_rulesets:
-  main-branch-protection:
-    bypass_actors: []
-```
+This means a repo can override the base `bypass_actors`
+while still contributing extra actors alongside those from
+category or org — and vice versa.
 
 ### Adding a Team
 
