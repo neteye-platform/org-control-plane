@@ -85,19 +85,14 @@ locals {
       target      = try(coalesce(try(pair.repo_rs.target, null), try(pair.cat_rs.target, null), try(pair.org_rs.target, null)), "branch")
       enforcement = try(coalesce(try(pair.repo_rs.enforcement, null), try(pair.cat_rs.enforcement, null), try(pair.org_rs.enforcement, null)), "active")
 
-      # bypass_actors: full override when set explicitly at repo or category level;
-      # otherwise merge org list with extra_bypass_actors from lower tiers
-      bypass_actors = (
-        try(pair.repo_rs.bypass_actors, null) != null
-        ? pair.repo_rs.bypass_actors
-        : try(pair.cat_rs.bypass_actors, null) != null
-        ? pair.cat_rs.bypass_actors
-        : distinct(concat(
-          try(pair.org_rs.bypass_actors, []),
-          try(pair.cat_rs.extra_bypass_actors, []),
-          try(pair.repo_rs.extra_bypass_actors, [])
-        ))
-      )
+      # bypass_actors: first available from repo > category > org; then
+      # concat ALL extra_bypass_actors from all tiers (org, category, repo).
+      bypass_actors = distinct(concat(
+        try(pair.repo_rs.bypass_actors, try(pair.cat_rs.bypass_actors, try(pair.org_rs.bypass_actors, []))),
+        try(pair.org_rs.extra_bypass_actors, []),
+        try(pair.cat_rs.extra_bypass_actors, []),
+        try(pair.repo_rs.extra_bypass_actors, [])
+      ))
 
       # Ref conditions are additive: include/exclude lists are concatenated across tiers.
       # Short branch names (e.g. "main") are expanded to "refs/heads/main".
