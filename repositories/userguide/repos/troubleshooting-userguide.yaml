@@ -1,0 +1,8 @@
+name: troubleshooting-userguide
+description: NetEye Troubleshooting UserGuide
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false

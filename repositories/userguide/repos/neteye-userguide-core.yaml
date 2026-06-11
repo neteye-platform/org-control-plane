@@ -1,0 +1,8 @@
+name: neteye-userguide-core
+description: NetEye UserGuide Core
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
