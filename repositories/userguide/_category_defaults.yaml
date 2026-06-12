@@ -1,0 +1,6 @@
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "TektonCI / neteye-userguide-pr-testing"
