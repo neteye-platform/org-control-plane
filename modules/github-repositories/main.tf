@@ -61,6 +61,20 @@ resource "github_team_repository" "access" {
   depends_on = [github_repository.repos]
 }
 
+# One issue label per (repo, label) pair; keyed as "repo/label-name".
+# Existing labels (including GitHub's defaults) are adopted on first apply
+# rather than failing with a 422 conflict.
+resource "github_issue_label" "labels" {
+  for_each = local.label_configs
+
+  repository  = github_repository.repos[each.value.repo_name].name
+  name        = each.value.name
+  color       = each.value.color
+  description = each.value.description
+
+  depends_on = [github_repository.repos]
+}
+
 # One ruleset resource per (repo, ruleset_name) pair; keyed as "repo/ruleset"
 resource "github_repository_ruleset" "rulesets" {
   for_each    = local.ruleset_configs
@@ -156,6 +170,7 @@ resource "github_repository_ruleset" "rulesets" {
         review_draft_pull_requests = copilot_code_review.value.review_draft_pull_requests
       }
     }
+
   }
 
   # Prevent ruleset deletion to avoid accidental loss of branch protection settings

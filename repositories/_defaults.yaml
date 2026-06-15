@@ -83,3 +83,29 @@ branch_rulesets:
       required_linear_history: true
       required_signatures: true
       non_fast_forward: true
+
+labels:
+  - name: bug
+    color: D73A4A
+    description: "Something isn't working"
+  - name: dependencies
+    color: 0366D6
+    description: "Pull requests that update a dependency file"
+  - name: documentation
+    color: 00EE5A
+    description: "Improvements or additions to documentation"
+  - name: duplicate
+    color: CFD3D7
+    description: "This issue or pull request already exists"
+  - name: feature
+    color: 3DB6D1
+    description: "New feature or request"
+  - name: no-stale
+    color: D93F0B
+    description: "This will not be marked as stale"
+  - name: security
+    color: 6F42C1
+    description: "Security related issues or improvements"
+  - name: stale
+    color: A3053A
+    description: "Issue or pull request inactive for a long time"
