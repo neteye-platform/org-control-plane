@@ -160,6 +160,55 @@ that scope:
 team_access: []
 ```
 
+### Labels
+
+Repository issue and pull-request labels are managed through the `labels`
+YAML list. Each entry has a `name`, a 6-digit hex `color` (without the
+leading `#`), and a `description`:
+
+```yaml
+labels:
+  - name: bug
+    color: D73A4A
+    description: "Something isn't working"
+  - name: feature
+    color: 3DB6D1
+    description: "New feature or request"
+```
+
+`labels` is inherited from the highest tier that sets it. A category-level
+`labels` replaces the org default; a repo-level `labels` replaces both.
+Define org-wide defaults in `repositories/_defaults.yaml` to apply them to
+every repository.
+
+Use `extra_labels` at the category or repo tier to **add** labels alongside
+the inherited `labels` list. Unlike `extra_team_access`, `extra_labels`
+**cannot override** entries already defined in `labels` — names already
+present in the base set are kept as-is. Within `extra_labels`, repo entries
+override category entries by name (most-specific wins).
+
+```yaml
+extra_labels:
+  - name: my-custom-label
+    color: FBCA04
+    description: "Using this label will be fun!"
+```
+
+To change the color or description of an inherited label, override it at
+the appropriate tier by adding it to that tier's `labels:` list. Use an
+empty list to remove all labels for that scope:
+
+```yaml
+labels: []
+```
+
+GitHub's auto-generated default labels (e.g. `bug`, `enhancement`) are
+adopted on first apply rather than failing with a 422 conflict; declaring
+them in `labels` simply updates their color and description. See the
+[`github_issue_label`][tf-label] resource docs for full details.
+
+[tf-label]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/issue_label
+
 ### Branch Rulesets
 
 Repository branch protection is managed with

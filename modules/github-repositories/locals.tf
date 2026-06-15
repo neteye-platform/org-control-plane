@@ -50,6 +50,47 @@ locals {
     ]) : "${pair.repo_name}/${pair.team}" => pair
   }
 
+  # Build one label entry per (repo, label name).
+  # Override strategy:
+  #   - `labels:` follows highest-tier-wins: a category or repo `labels:`
+  #     replaces the inherited list entirely (repo > category > org).
+  #   - `extra_labels:` is purely additive and NEVER overrides a name already
+  #     present in the base `labels:` set; use it to add labels alongside the
+  #     inherited defaults. Within extra_labels, repo overrides category by
+  #     name (most-specific wins).
+  label_configs = {
+    for pair in flatten([
+      for repo_name in keys(local.repos) : [
+        for label_name, entry in merge(
+          # extra_labels from category and repo (additive, lowest priority).
+          # Listed first so the base-labels block below can shadow them by name.
+          {
+            for l in concat(
+              try(local.repo_yamls[repo_name].labels, null) == null ? try(var.category_defaults.extra_labels, []) : [],
+              try(local.repo_yamls[repo_name].extra_labels, []),
+            ) : l.name => l
+          },
+          # Base labels: highest tier that explicitly sets `labels:` wins.
+          # Listed last so base names always win over extra_labels on collision.
+          {
+            for l in(
+              try(local.repo_yamls[repo_name].labels, null) != null
+              ? local.repo_yamls[repo_name].labels
+              : try(var.category_defaults.labels, null) != null
+              ? var.category_defaults.labels
+              : try(var.org_defaults.labels, [])
+            ) : l.name => l
+          },
+          ) : {
+          repo_name   = repo_name
+          name        = label_name
+          color       = entry.color
+          description = entry.description
+        }
+      ]
+    ]) : "${pair.repo_name}/${pair.name}" => pair
+  }
+
   # Shorthand references to each tier's branch_rulesets map
   _org_rs_map  = try(var.org_defaults.branch_rulesets, {})
   _cat_rs_map  = try(var.category_defaults.branch_rulesets, {})
@@ -62,6 +103,7 @@ locals {
   # Merge strategy per field type:
   #   - Scalars:        repo > category > org  (coalesce)
   #   - Additive lists: concat all tiers, deduplicated  (conditions, required_check)
+  #   - required_check_override: full replacement when set at repo or category level
   #   - bypass_actors:  full replacement when set explicitly; otherwise additive via extra_bypass_actors
   #   - merge_queue:    highest-priority tier that defines it wins entirely
   ruleset_configs = {
@@ -139,11 +181,17 @@ locals {
         required_status_checks = {
           strict_required_status_checks_policy = try(coalesce(try(pair.repo_rs.rules.required_status_checks.strict_required_status_checks_policy, null), try(pair.cat_rs.rules.required_status_checks.strict_required_status_checks_policy, null), try(pair.org_rs.rules.required_status_checks.strict_required_status_checks_policy, null)), null)
           do_not_enforce_on_create             = try(coalesce(try(pair.repo_rs.rules.required_status_checks.do_not_enforce_on_create, null), try(pair.cat_rs.rules.required_status_checks.do_not_enforce_on_create, null), try(pair.org_rs.rules.required_status_checks.do_not_enforce_on_create, null)), null)
-          required_check = distinct(concat(
-            try(pair.org_rs.rules.required_status_checks.required_check, []),
-            try(pair.cat_rs.rules.required_status_checks.required_check, []),
-            try(pair.repo_rs.rules.required_status_checks.required_check, [])
-          ))
+          required_check = (
+            try(pair.repo_rs.rules.required_status_checks.required_check_override, null) != null
+            ? pair.repo_rs.rules.required_status_checks.required_check_override
+            : try(pair.cat_rs.rules.required_status_checks.required_check_override, null) != null
+            ? pair.cat_rs.rules.required_status_checks.required_check_override
+            : distinct(concat(
+              try(pair.org_rs.rules.required_status_checks.required_check, []),
+              try(pair.cat_rs.rules.required_status_checks.required_check, []),
+              try(pair.repo_rs.rules.required_status_checks.required_check, [])
+            ))
+          )
         }
 
         required_code_scanning = {
