@@ -50,6 +50,43 @@ locals {
     ]) : "${pair.repo_name}/${pair.team}" => pair
   }
 
+  # Build one user-access entry per (repo, username).
+  # Override strategy: the most specific tier that defines `user_access` wins
+  # entirely (repo > category > org). Lower tiers are NOT merged in.
+  # Use `extra_user_access` at the category or repo tier to keep the inherited
+  # list and add/override individual entries by username.
+  user_access_configs = {
+    for pair in flatten([
+      for repo_name in keys(local.repos) : [
+        for username, entry in merge(
+          # Base list: highest tier that explicitly sets user_access wins.
+          {
+            for u in(
+              try(local.repo_yamls[repo_name].user_access, null) != null
+              ? local.repo_yamls[repo_name].user_access
+              : try(var.category_defaults.user_access, null) != null
+              ? var.category_defaults.user_access
+              : try(var.org_defaults.user_access, [])
+            ) : u.username => u
+          },
+          # Additive overrides keyed by username (category then repo).
+          {
+            for u in(
+              try(local.repo_yamls[repo_name].user_access, null) == null
+              ? try(var.category_defaults.extra_user_access, [])
+              : []
+            ) : u.username => u
+          },
+          { for u in try(local.repo_yamls[repo_name].extra_user_access, []) : u.username => u }
+          ) : {
+          repo_name  = repo_name
+          username   = username
+          permission = entry.permission
+        }
+      ]
+    ]) : "${pair.repo_name}/${pair.username}" => pair
+  }
+
   # Build one label entry per (repo, label name).
   # Override strategy:
   #   - `labels:` follows highest-tier-wins: a category or repo `labels:`
