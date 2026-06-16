@@ -4,3 +4,4 @@ branch_rulesets:
       required_status_checks:
         required_check:
           - context: "TektonCI / neteye-userguide-pr-testing"
+            integration_id: 1112696 # Pipeline As Code

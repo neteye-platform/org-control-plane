@@ -16,4 +16,6 @@ branch_rulesets:
       required_status_checks:
         required_check:
           - context: "Tests"
+            integration_id: 15368 # GH Actions
           - context: "TY Check"
+            integration_id: 15368 # GH Actions
