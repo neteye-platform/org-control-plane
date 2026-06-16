@@ -61,6 +61,8 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "common-pull-request-checks / trivy-scan / Trivy FS Scan"
             integration_id: 15368 # GH Actions
+          - context: "common-pull-request-checks / validate-pr-title / Validate PR Title"
+            integration_id: 15368 # GH Actions
       non_fast_forward: true
       copilot_code_review:
         review_on_push: false
