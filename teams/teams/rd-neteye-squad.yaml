@@ -1,0 +1,5 @@
+name: rd-neteye-squad
+description: R&D Neteye Squad
+privacy: closed
+notification_setting: notifications_enabled
+# ldap_dn needs to be set manually

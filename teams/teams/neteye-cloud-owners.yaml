@@ -1,0 +1,5 @@
+name: neteye-cloud-owners
+description: neteye.cloud Product Owners
+privacy: closed
+notification_setting: notifications_enabled
+# ldap_dn needs to be set manually
