@@ -6,3 +6,11 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "TektonCI / nep-build-and-test"
+            integration_id: 1112696 # Pipeline As Code
