@@ -61,6 +61,19 @@ resource "github_team_repository" "access" {
   depends_on = [github_repository.repos]
 }
 
+# One collaborator entry per (repo, username) pair; keyed as "repo/username".
+# Adding a user creates a pending invitation that the user must accept;
+# destroying the resource revokes the invitation or removes the collaborator.
+resource "github_repository_collaborator" "access" {
+  for_each = local.user_access_configs
+
+  repository = github_repository.repos[each.value.repo_name].name
+  username   = each.value.username
+  permission = each.value.permission
+
+  depends_on = [github_repository.repos]
+}
+
 # One issue label per (repo, label) pair; keyed as "repo/label-name".
 # Existing labels (including GitHub's defaults) are adopted on first apply
 # rather than failing with a 422 conflict.

@@ -160,6 +160,47 @@ that scope:
 team_access: []
 ```
 
+### User Access
+
+Repository per-user permissions are managed through the `user_access` YAML
+list, which mirrors `team_access` but takes a GitHub `username` instead of
+a team slug. Each entry uses the same permission levels: `pull` (read),
+`triage`, `push` (write), `maintain`, or `admin`.
+
+`user_access` follows the same inheritance rules as `team_access`: the
+highest tier that defines it wins entirely; lower tiers are not merged
+in. Collaborators are usually scoped to a single repository, so this
+list is typically declared per-repo:
+
+```yaml
+user_access:
+  - username: external-contributor
+    permission: push
+```
+
+Use `extra_user_access` to keep the inherited `user_access` list and add
+or override entries (matched by username) at the category or repo tier:
+
+```yaml
+extra_user_access:
+  - username: external-contributor
+    permission: maintain
+```
+
+Use an empty list to remove all user access for that scope:
+
+```yaml
+user_access: []
+```
+
+Adding a user creates a pending GitHub invitation that the user must
+accept before gaining access; pending invitations do not expire.
+Destroying the resource revokes the invitation if unaccepted, otherwise
+removes the collaborator. See the
+[`github_repository_collaborator`][tf-collab] resource docs for details.
+
+[tf-collab]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_collaborator
+
 ### Labels
 
 Repository issue and pull-request labels are managed through the `labels`
