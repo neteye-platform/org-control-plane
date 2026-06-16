@@ -10,6 +10,10 @@ archived: false
 #   repository: default-repository-template
 #   include_all_branches: false
 
+extra_team_access:
+  - team: rd-neteye-cloud-platform-engineering-squad
+    permission: admin
+
 branch_rulesets:
   main-branch-protection:
     rules:
