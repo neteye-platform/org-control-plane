@@ -1,8 +1,0 @@
-name: nep-monitoring-siem
-description: NEP for monitoring SIEM integration.
-is_template: false
-archived: false
-template:
-  owner: neteye-platform
-  repository: default-repository-template
-  include_all_branches: false
