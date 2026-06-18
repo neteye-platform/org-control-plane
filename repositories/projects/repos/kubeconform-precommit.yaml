@@ -1,5 +1,5 @@
 name: kubeconform-precommit
-description: pre-commit hook to validate Kubernetes manifests with Kubeconform, with support for regex filtering and Kustomize builds.
+description: pre-commit hook to validate Kubernetes manifests with Kubeconform, with support for regex filtering and Kustomize builds
 is_template: false
 archived: false
 # NOTE: This repository was not created from the template, but the configuration files were copied into.

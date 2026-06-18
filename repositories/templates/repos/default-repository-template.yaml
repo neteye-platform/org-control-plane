@@ -1,4 +1,4 @@
 name: default-repository-template
-description: Default repository template for the neteye-platform Org.
+description: Default repository template
 is_template: true
 archived: false
