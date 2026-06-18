@@ -1,5 +1,5 @@
 name: org-control-plane
-description: Centralized control plane for managing organization infrastructure using Terragrunt.
+description: Centralized control plane for managing organization infrastructure using Terragrunt
 is_template: false
 archived: false
 template:

@@ -296,7 +296,7 @@ branch_rulesets:
         required_check:
           - context: >-
               common-pull-request-checks / pre-commit-checks / Pre-commit Checks
-            integration_id: 15368 # GH Actions App ID
+            integration_id: 15368 # GH Actions
       required_code_scanning:
         required_code_scanning_tool:
           - tool: CodeQL
