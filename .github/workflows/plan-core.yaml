@@ -73,9 +73,11 @@ jobs:
               }
             );
 
-            const stale = comments.filter(
-              (c) => c.performed_via_github_app?.id === appId && c.body.trimStart().startsWith('<details')
-            );
+            const stale = comments.filter((c) => {
+              if (c.performed_via_github_app?.id !== appId) return false;
+              const body = c.body.trimStart();
+              return body.startsWith('Execution result of "plan"') || body.startsWith('No changes in `');
+            });
 
             core.info(`Found ${stale.length} previous plan comment(s)`);
 
@@ -141,9 +143,9 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terragrunt Plan
+        id: plan
         uses: gruntwork-io/terragrunt-action@4ed5b7344c80315e5357f28f36159fc980bc2d5a # v3.4.0
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-auth.outputs.token }}
           TF_VAR_github_org: ${{ github.repository_owner }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
           TF_VAR_billing_email: ${{ secrets.BILLING_EMAIL }}
@@ -155,4 +157,40 @@ jobs:
           github_token: ${{ steps.generate-token-auth.outputs.token }}
           tg_dir: "${{ matrix.unit }}"
           tg_command: "plan"
-          tg_comment: 1
+          tg_comment: 0
+          tg_output_capture: 1
+
+      - name: Post plan comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PLAN_OUTPUT: ${{ steps.plan.outputs.tg_action_output }}
+          TG_DIR: ${{ matrix.unit }}
+        with:
+          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-auth.outputs.token }}
+          script: |
+            const output = process.env.PLAN_OUTPUT;
+            const tgDir = process.env.TG_DIR;
+            if (!output) {
+              throw new Error('tg_action_output is empty — cannot determine plan result');
+            }
+            const hasChanges = !output.includes('No changes. Your infrastructure matches the configuration.');
+            const body = hasChanges
+              ? [
+                  `Execution result of "plan" in \`${tgDir}\``,
+                  '',
+                  '<details>',
+                  '<summary>Show output</summary>',
+                  '',
+                  '```terraform',
+                  output,
+                  '```',
+                  '',
+                  '</details>',
+                ].join('\n')
+              : `No changes in \`${tgDir}\`. Infrastructure matches the configuration.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
