@@ -171,11 +171,12 @@ jobs:
         with:
           github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-auth.outputs.token }}
           script: |
-            const output = process.env.PLAN_OUTPUT;
+            const raw = process.env.PLAN_OUTPUT;
             const tgDir = process.env.TG_DIR;
-            if (!output) {
+            if (!raw) {
               throw new Error('tg_action_output is empty — cannot determine plan result');
             }
+            const output = raw.replace(/%25/g, '%').replace(/%0D/g, '\r').replace(/%0A/g, '\n');
             const hasChanges = !output.includes('No changes. Your infrastructure matches the configuration.');
             const body = hasChanges
               ? [
