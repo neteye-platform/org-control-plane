@@ -39,6 +39,13 @@ provider "github" {
 EOF
 }
 
+terraform {
+  extra_arguments "retry_lock" {
+    commands  = get_terraform_commands_that_need_locking()
+    arguments = ["-lock-timeout=20m"]
+  }
+}
+
 # Define locals for reuse across child units (with expose = true above)
 locals {
   aws_region     = get_env("TF_VAR_aws_region")

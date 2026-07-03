@@ -96,9 +96,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    concurrency:
-      group: terragrunt-action-${{ matrix.unit }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix) }}
