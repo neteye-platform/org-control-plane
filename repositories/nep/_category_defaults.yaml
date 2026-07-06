@@ -1,7 +1,7 @@
 extra_team_access:
   - team: rd-neteye-cloud-platform-engineering-squad
     permission: admin
-  - team: neteye-cloud-owners
+  - team: neteye-nep-admins
     permission: admin
   - team: neteye-cloud-delivery-team
     permission: push
