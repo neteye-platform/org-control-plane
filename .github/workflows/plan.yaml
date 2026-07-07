@@ -31,9 +31,15 @@ jobs:
   terragrunt-plan-success:
     name: Terragrunt Plan Success
     needs: terragrunt-plan
+    if: always()
     permissions:
       contents: none
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "All plan jobs completed successfully!"
+          if [ "${{ needs.terragrunt-plan.result }}" == "success" ]; then
+            echo "All plan jobs completed successfully!"
+          else
+            echo "Some plan jobs failed. Please check the logs for details."
+            exit 1
+          fi
