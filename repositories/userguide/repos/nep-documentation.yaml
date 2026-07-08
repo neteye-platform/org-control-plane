@@ -6,3 +6,7 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+extra_team_access:
+  - team: neteye-nep-admins
+    permission: push
