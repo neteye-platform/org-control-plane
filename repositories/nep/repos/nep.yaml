@@ -16,6 +16,16 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "TektonCI / nep-build-and-test"
             integration_id: 1112696 # Pipeline As Code
+
+  main-merge-queue-protection:
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include:
+          - "~DEFAULT_BRANCH"
+        exclude: []
+    rules:
       merge_queue:
         merge_method: "SQUASH"
         check_response_timeout_minutes: 120
