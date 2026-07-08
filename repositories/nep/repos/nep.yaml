@@ -16,3 +16,8 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "TektonCI / nep-build-and-test"
             integration_id: 1112696 # Pipeline As Code
+      merge_queue:
+        merge_method: "SQUASH"
+        check_response_timeout_minutes: 120
+        max_entries_to_merge: 10
+        max_entries_to_build: 10
