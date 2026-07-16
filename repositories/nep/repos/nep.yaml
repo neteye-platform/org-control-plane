@@ -12,7 +12,7 @@ branch_rulesets:
     rules:
       required_status_checks:
         required_check:
-          - context: "validate-nep-scope"
+          - context: "Validate NEP Scope"
             integration_id: 15368 # GH Actions
           - context: "TektonCI / nep-build-and-test"
             integration_id: 1112696 # Pipeline As Code
