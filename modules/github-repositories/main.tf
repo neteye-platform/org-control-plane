@@ -74,16 +74,22 @@ resource "github_repository_collaborator" "access" {
   depends_on = [github_repository.repos]
 }
 
-# One issue label per (repo, label) pair; keyed as "repo/label-name".
-# Existing labels (including GitHub's defaults) are adopted on first apply
-# rather than failing with a 422 conflict.
-resource "github_issue_label" "labels" {
-  for_each = local.label_configs
+# One github_issue_labels resource per repo. This resource is authoritative:
+# any label not present in labels_by_repo is deleted from the repository,
+# including GitHub's auto-generated defaults (bug, enhancement, ...).
+resource "github_issue_labels" "labels" {
+  for_each = local.labels_by_repo
 
-  repository  = github_repository.repos[each.value.repo_name].name
-  name        = each.value.name
-  color       = each.value.color
-  description = each.value.description
+  repository = github_repository.repos[each.key].name
+
+  dynamic "label" {
+    for_each = each.value
+    content {
+      name        = label.value.name
+      color       = label.value.color
+      description = label.value.description
+    }
+  }
 
   depends_on = [github_repository.repos]
 }

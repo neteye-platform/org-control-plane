@@ -243,12 +243,20 @@ empty list to remove all labels for that scope:
 labels: []
 ```
 
-GitHub's auto-generated default labels (e.g. `bug`, `enhancement`) are
-adopted on first apply rather than failing with a 422 conflict; declaring
-them in `labels` simply updates their color and description. See the
-[`github_issue_label`][tf-label] resource docs for full details.
+Labels are managed with the authoritative
+[`github_issue_labels`][tf-labels] resource: **any label that exists on
+the repository but is not present in the merged `labels`/`extra_labels`
+result is deleted**, including GitHub's auto-generated defaults (e.g.
+`bug`, `enhancement`, `good first issue`). Declare every label you want
+to keep — the org-wide `labels` list in `repositories/_defaults.yaml`
+already covers the common set.
 
-[tf-label]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/issue_label
+Renaming a label (changing its `name`) deletes the old label and creates
+a new one, detaching it from any issues or pull requests it was
+previously attached to. Changing only the `color` or `description`
+updates the existing label in place.
+
+[tf-labels]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/issue_labels
 
 ### Branch Rulesets
 
