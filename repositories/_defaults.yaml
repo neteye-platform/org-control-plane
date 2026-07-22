@@ -116,3 +116,9 @@ labels:
   - name: stale
     color: A3053A
     description: "Issue or pull request inactive for a long time"
+  - name: "autorelease: pending"
+    color: FBCA04
+    description: "Automated release in progress"
+  - name: "autorelease: tagged"
+    color: 0E8A16
+    description: "Automated release tagged"

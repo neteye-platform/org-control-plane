@@ -87,7 +87,8 @@ locals {
     ]) : "${pair.repo_name}/${pair.username}" => pair
   }
 
-  # Build one label entry per (repo, label name).
+  # Build the full label list per repository, consumed by the authoritative
+  # github_issue_labels resource (one resource per repo, not per label).
   # Override strategy:
   #   - `labels:` follows highest-tier-wins: a category or repo `labels:`
   #     replaces the inherited list entirely (repo > category > org).
@@ -95,37 +96,28 @@ locals {
   #     present in the base `labels:` set; use it to add labels alongside the
   #     inherited defaults. Within extra_labels, repo overrides category by
   #     name (most-specific wins).
-  label_configs = {
-    for pair in flatten([
-      for repo_name in keys(local.repos) : [
-        for label_name, entry in merge(
-          # extra_labels from category and repo (additive, lowest priority).
-          # Listed first so the base-labels block below can shadow them by name.
-          {
-            for l in concat(
-              try(local.repo_yamls[repo_name].labels, null) == null ? try(var.category_defaults.extra_labels, []) : [],
-              try(local.repo_yamls[repo_name].extra_labels, []),
-            ) : l.name => l
-          },
-          # Base labels: highest tier that explicitly sets `labels:` wins.
-          # Listed last so base names always win over extra_labels on collision.
-          {
-            for l in(
-              try(local.repo_yamls[repo_name].labels, null) != null
-              ? local.repo_yamls[repo_name].labels
-              : try(var.category_defaults.labels, null) != null
-              ? var.category_defaults.labels
-              : try(var.org_defaults.labels, [])
-            ) : l.name => l
-          },
-          ) : {
-          repo_name   = repo_name
-          name        = label_name
-          color       = entry.color
-          description = entry.description
-        }
-      ]
-    ]) : "${pair.repo_name}/${pair.name}" => pair
+  labels_by_repo = {
+    for repo_name in keys(local.repos) : repo_name => values(merge(
+      # extra_labels from category and repo (additive, lowest priority).
+      # Listed first so the base-labels block below can shadow them by name.
+      {
+        for l in concat(
+          try(local.repo_yamls[repo_name].labels, null) == null ? try(var.category_defaults.extra_labels, []) : [],
+          try(local.repo_yamls[repo_name].extra_labels, []),
+        ) : l.name => l
+      },
+      # Base labels: highest tier that explicitly sets `labels:` wins.
+      # Listed last so base names always win over extra_labels on collision.
+      {
+        for l in(
+          try(local.repo_yamls[repo_name].labels, null) != null
+          ? local.repo_yamls[repo_name].labels
+          : try(var.category_defaults.labels, null) != null
+          ? var.category_defaults.labels
+          : try(var.org_defaults.labels, [])
+        ) : l.name => l
+      },
+    ))
   }
 
   # Shorthand references to each tier's branch_rulesets map
