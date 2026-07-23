@@ -9,3 +9,7 @@ branch_rulesets:
         required_check:
           - context: "TektonCI / neteye-userguide-pr-testing"
             integration_id: 1112696 # Pipeline As Code
+    extra_bypass_actors:
+      - actor_id: 0
+        actor_type: DeployKey
+        bypass_mode: always
