@@ -5,3 +5,5 @@ extra_team_access:
     permission: admin
   - team: neteye-cloud-delivery-team
     permission: push
+  - team: service-support
+    permission: push
