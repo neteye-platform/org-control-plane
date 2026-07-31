@@ -24,6 +24,8 @@ resource "github_repository" "repos" {
   allow_rebase_merge          = each.value.allow_rebase_merge
   allow_auto_merge            = each.value.allow_auto_merge
   allow_forking               = try(each.value.allow_forking, null)
+  merge_commit_title          = each.value.merge_commit_title
+  merge_commit_message        = each.value.merge_commit_message
   squash_merge_commit_title   = each.value.squash_merge_commit_title
   squash_merge_commit_message = each.value.squash_merge_commit_message
   delete_branch_on_merge      = each.value.delete_branch_on_merge
