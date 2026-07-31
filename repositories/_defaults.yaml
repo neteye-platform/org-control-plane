@@ -93,6 +93,21 @@ branch_rulesets:
       required_signatures: true
       non_fast_forward: true
 
+  # GitHub auto-creates this ruleset per-repo outside our config.
+  # We override it here to disable it.
+  Code Quality Copilot review for default branch:
+    target: branch
+    enforcement: disabled
+    conditions:
+      ref_name:
+        include:
+          - "~DEFAULT_BRANCH"
+        exclude: []
+    rules:
+      copilot_code_review:
+        review_on_push: true
+        review_draft_pull_requests: true
+
 labels:
   - name: bug
     color: D73A4A
