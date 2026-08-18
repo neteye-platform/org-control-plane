@@ -1,0 +1,8 @@
+name: keycloak-login-sync-provider
+description: Keycloak custom authenticator for user login synchronization
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
