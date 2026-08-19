@@ -1,5 +1,11 @@
 name: keycloak-oidc-groups-mapper
 description: Keycloak custom mapper to map OIDC claims to Keycloak groups
+topics:
+  - identity-management
+  - java
+  - keycloak
+  - oidc
+  - sso
 is_template: false
 archived: false
 template:

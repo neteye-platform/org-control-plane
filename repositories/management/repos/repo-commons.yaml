@@ -1,5 +1,10 @@
 name: repo-commons
 description: Central repository for shared configuration files
+topics:
+  - ci-cd
+  - configuration
+  - devops
+  - github-actions
 is_template: false
 archived: false
 # NOTE: This repository was not created from the template, but the configuration files were copied into.

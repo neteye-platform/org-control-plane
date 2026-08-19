@@ -1,5 +1,11 @@
 name: neteye-operator
 description: NetEye Kubernetes operator
+topics:
+  - neteye
+  - golang
+  - kubernetes
+  - kubernetes-operator
+  - operator
 is_template: false
 archived: false
 template:

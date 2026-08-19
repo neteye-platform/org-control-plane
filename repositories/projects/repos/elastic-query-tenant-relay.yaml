@@ -1,5 +1,11 @@
 name: elastic-query-tenant-relay
 description: Provides REST endpoint to access cached version of Kibana alerts
+topics:
+  - neteye
+  - elasticsearch
+  - fastapi
+  - kibana
+  - rest-api
 is_template: false
 archived: false
 # NOTE: This repository was not created from the template, but the configuration files were copied into.

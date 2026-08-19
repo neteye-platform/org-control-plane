@@ -1,5 +1,11 @@
 name: glpi-plugin-inventorymultitenancy
 description: GLPI plugin for inventory multitenancy
+topics:
+  - glpi
+  - glpi-plugin
+  - inventory
+  - multitenancy
+  - php
 is_template: false
 archived: false
 template:

@@ -1,5 +1,10 @@
 name: neteye-userguide-content
 description: NetEye Userguide | Content
+topics:
+  - neteye
+  - docs
+  - documentation
+  - userguide
 is_template: false
 archived: false
 template:
