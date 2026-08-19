@@ -1,5 +1,12 @@
 name: neteye-keycloak
 description: NetEye Keycloak image
+topics:
+  - neteye
+  - container
+  - docker
+  - identity-management
+  - keycloak
+  - oidc
 is_template: false
 archived: false
 template:

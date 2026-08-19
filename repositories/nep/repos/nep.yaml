@@ -1,5 +1,10 @@
 name: nep
 description: NetEye Extension Packs
+topics:
+  - neteye
+  - monitoring
+  - nagios
+  - observability
 is_template: false
 archived: false
 template:

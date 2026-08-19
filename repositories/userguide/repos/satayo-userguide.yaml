@@ -1,5 +1,9 @@
 name: satayo-userguide
 description: NetEye Userguide | Satayo
+topics:
+  - neteye
+  - documentation
+  - userguide
 is_template: false
 archived: false
 template:

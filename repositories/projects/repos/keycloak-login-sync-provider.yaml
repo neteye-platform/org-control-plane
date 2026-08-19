@@ -1,5 +1,11 @@
 name: keycloak-login-sync-provider
 description: Keycloak custom authenticator for user login synchronization
+topics:
+  - authentication
+  - identity-management
+  - java
+  - keycloak
+  - oidc
 is_template: false
 archived: false
 template:

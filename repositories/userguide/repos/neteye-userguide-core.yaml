@@ -1,5 +1,10 @@
 name: neteye-userguide-core
 description: NetEye Userguide | Core
+topics:
+  - neteye
+  - docs
+  - documentation
+  - userguide
 is_template: false
 archived: false
 template:

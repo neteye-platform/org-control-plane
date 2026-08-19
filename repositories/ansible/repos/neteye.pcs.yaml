@@ -1,5 +1,11 @@
 name: neteye.pcs
 description: Ansible NetEye PCS collection
+topics:
+  - neteye
+  - ansible
+  - ansible-collection
+  - automation
+  - pacemaker
 is_template: false
 archived: false
 template:

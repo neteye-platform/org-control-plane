@@ -1,5 +1,10 @@
 name: neteye.upgrade_manager
 description: Ansible NetEye Upgrade Manager collection
+topics:
+  - neteye
+  - ansible
+  - ansible-collection
+  - automation
 is_template: false
 archived: false
 template:

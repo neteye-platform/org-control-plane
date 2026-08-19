@@ -1,5 +1,9 @@
 name: nep-documentation
 description: NetEye Userguide | NEP
+topics:
+  - neteye
+  - docs
+  - documentation
 is_template: false
 archived: false
 template:

@@ -1,5 +1,12 @@
 name: neteye-aws-provision
 description: Terraform and Ansible code for provisioning AWS infrastructure for NetEye
+topics:
+  - neteye
+  - ansible
+  - aws
+  - devops
+  - infrastructure-as-code
+  - terraform
 is_template: false
 archived: false
 template:

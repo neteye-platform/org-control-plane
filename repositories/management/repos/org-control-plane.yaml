@@ -1,5 +1,11 @@
 name: org-control-plane
 description: Centralized control plane for managing organization infrastructure using Terragrunt
+topics:
+  - devops
+  - github
+  - infrastructure-as-code
+  - terraform
+  - terragrunt
 is_template: false
 archived: false
 template:
