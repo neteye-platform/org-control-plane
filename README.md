@@ -100,9 +100,13 @@ Create a YAML file in
 name: my-website
 description: My website repository.
 homepage_url: https://example.com
+topics:
+  - website
+  - web
 ```
 
-Only fields that differ from the defaults are required.
+`topics` is always required, every repo needs at least one.
+Other fields are required only when they differ from the defaults.
 Settings are merged in three tiers:
 
 1. `repositories/_defaults.yaml` — org-wide defaults

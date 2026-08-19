@@ -34,7 +34,7 @@ resource "github_repository" "repos" {
   license_template            = try(each.value.license_template, null)
   archived                    = each.value.archived
   archive_on_destroy          = try(each.value.archive_on_destroy, false)
-  topics                      = try(each.value.topics, [])
+  topics                      = each.value.topics
   dynamic "template" {
     for_each = try([each.value.template], [])
 
