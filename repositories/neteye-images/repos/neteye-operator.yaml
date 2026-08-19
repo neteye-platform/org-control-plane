@@ -12,3 +12,19 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "Unit tests"
+            integration_id: 15368 # GH Actions
+          - context: "Integration tests"
+            integration_id: 15368 # GH Actions
+          - context: "Build operator image / Build Docker Image"
+            integration_id: 15368 # GH Actions
+          - context: "Build bundle image / Build Docker Image"
+            integration_id: 15368 # GH Actions
+          - context: "Build catalog image / Build Docker Image"
+            integration_id: 15368 # GH Actions
