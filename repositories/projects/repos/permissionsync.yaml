@@ -1,0 +1,15 @@
+name: permissionsync
+description: Synchronizes user permissions across services using pluggable adapters
+topics:
+  - authorization
+  - identity-management
+  - identity-provisioning
+  - kubernetes
+  - rbac
+  - rust
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
