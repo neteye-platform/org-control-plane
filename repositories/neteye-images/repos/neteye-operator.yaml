@@ -26,5 +26,3 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "Build bundle image / Build Docker Image"
             integration_id: 15368 # GH Actions
-          - context: "Build catalog image / Build Docker Image"
-            integration_id: 15368 # GH Actions
