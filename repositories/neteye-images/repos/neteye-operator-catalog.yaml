@@ -18,5 +18,5 @@ branch_rulesets:
     rules:
       required_status_checks:
         required_check:
-          - context: "Build catalog image / Build Docker Image"
+          - context: "Build catalog image"
             integration_id: 15368 # GH Actions
