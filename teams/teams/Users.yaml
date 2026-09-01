@@ -1,5 +1,0 @@
-name: Users
-description: Default users team to keep org membership in sync. Don't modify this team!
-privacy: closed
-notification_setting: notifications_enabled
-# ldap_dn needs to be set manually
