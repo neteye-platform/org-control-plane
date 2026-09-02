@@ -26,3 +26,11 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "Build bundle image / Build Docker Image"
             integration_id: 15368 # GH Actions
+          - context: "Deepcopy & CRD"
+            integration_id: 15368 # GH Actions
+          - context: "OLM bundle"
+            integration_id: 15368 # GH Actions
+          - context: "Helm lint"
+            integration_id: 15368 # GH Actions
+          - context: "Helm template"
+            integration_id: 15368 # GH Actions
