@@ -15,6 +15,10 @@ template:
 
 branch_rulesets:
   main-branch-protection:
+    conditions:
+      ref_name:
+        include:
+          - "release/*"
     rules:
       required_status_checks:
         required_check:
@@ -22,9 +26,9 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "Integration tests"
             integration_id: 15368 # GH Actions
-          - context: "Build operator image / Build Docker Image"
+          - context: "Build operator image"
             integration_id: 15368 # GH Actions
-          - context: "Build bundle image / Build Docker Image"
+          - context: "Build bundle image"
             integration_id: 15368 # GH Actions
           - context: "Deepcopy & CRD"
             integration_id: 15368 # GH Actions
