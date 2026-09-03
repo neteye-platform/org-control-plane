@@ -3,7 +3,7 @@ description: AI Tutor Plugin for providing intelligent code suggestions and guid
 topics:
   - ai
   - plugin
-  - prompt guidance
+  - prompt-guidance
   - tutor
 is_template: false
 archived: false
