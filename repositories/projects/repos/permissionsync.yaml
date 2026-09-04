@@ -13,3 +13,11 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "Rust Validation"
+            integration_id: 15368 # GH Actions
