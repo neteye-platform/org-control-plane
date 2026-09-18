@@ -1,11 +1,15 @@
 name: permissionsync
-description: Synchronizes user permissions across services using pluggable adapters
+description: Identity-driven permission synchronization across target applications
 topics:
+  - access-control
   - authorization
+  - iam
   - identity-management
   - identity-provisioning
   - kubernetes
+  - permission-management
   - rbac
+  - reconciliation
   - rust
 is_template: false
 archived: false

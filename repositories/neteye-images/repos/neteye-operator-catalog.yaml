@@ -31,7 +31,7 @@ branch_rulesets:
     target: branch
     enforcement: active
     bypass_actors:
-      - actor_id: 265889471 # neteye-steward
+      - actor_id: 3017534 # neteye-steward
         actor_type: Integration
         bypass_mode: pull_request
     conditions:
