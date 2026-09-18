@@ -21,7 +21,7 @@ branch_rulesets:
         required_approving_review_count: 3
       required_status_checks:
         required_check:
-          - context: "Terragrunt Plan Success"
+          - context: "Terragrunt Plan Status"
             integration_id: 15368 # GH Actions
   main-tag-protection:
     bypass_actors: []
