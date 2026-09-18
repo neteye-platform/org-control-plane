@@ -28,18 +28,19 @@ jobs:
       NETEYE_MANAGER_APP_PRIVATE_KEY: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
       NETEYE_APP_PRIVATE_KEY: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
 
-  terragrunt-plan-success:
-    name: Terragrunt Plan Success
-    needs: terragrunt-plan
+  terragrunt-plan-status:
+    name: Terragrunt Plan Status
+    needs: [generate-matrix, terragrunt-plan]
     if: always()
     permissions:
       contents: none
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          if [ "${{ needs.terragrunt-plan.result }}" == "success" ]; then
-            echo "All plan jobs completed successfully!"
-          else
-            echo "Some plan jobs failed. Please check the logs for details."
+      - name: Check plan job results
+        env:
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          if [ "$FAILED" = "true" ]; then
+            echo "::error::A plan job failed or was cancelled"
             exit 1
           fi
