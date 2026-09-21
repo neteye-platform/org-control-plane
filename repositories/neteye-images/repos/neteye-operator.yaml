@@ -34,7 +34,3 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "OLM bundle"
             integration_id: 15368 # GH Actions
-          - context: "Helm lint"
-            integration_id: 15368 # GH Actions
-          - context: "Helm template"
-            integration_id: 15368 # GH Actions
