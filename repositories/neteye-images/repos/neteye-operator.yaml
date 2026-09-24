@@ -19,6 +19,10 @@ branch_rulesets:
       ref_name:
         include:
           - "release/*"
+    extra_bypass_actors:
+      - actor_id: 3017534 # neteye-steward
+        actor_type: Integration
+        bypass_mode: always
     rules:
       required_status_checks:
         required_check:
