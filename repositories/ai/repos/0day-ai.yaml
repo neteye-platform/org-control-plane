@@ -1,0 +1,19 @@
+name: 0day-ai
+description: Multi-agent LLM pipeline for vulnerability discovery in large codebases, with sandbox-validated findings and proposed fixes
+topics:
+  - agentic-ai
+  - ai
+  - appsec
+  - cybersecurity
+  - llm
+  - multi-agent
+  - python
+  - sast
+  - security
+  - vulnerability-detection
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
