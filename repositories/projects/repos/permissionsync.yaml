@@ -23,5 +23,11 @@ branch_rulesets:
     rules:
       required_status_checks:
         required_check:
+          - context: "GLPI Adapter Tests"
+            integration_id: 15368 # GH Actions
+          - context: "Keycloak Authentication Tests"
+            integration_id: 15368 # GH Actions
+          - context: "OCI Image Tests"
+            integration_id: 15368 # GH Actions
           - context: "Rust Validation"
             integration_id: 15368 # GH Actions
