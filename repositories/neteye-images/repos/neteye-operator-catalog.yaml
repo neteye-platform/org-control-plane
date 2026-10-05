@@ -15,6 +15,10 @@ template:
 
 branch_rulesets:
   main-branch-protection:
+    conditions:
+      ref_name:
+        include_override:
+          - "~DEFAULT_BRANCH"
     rules:
       pull_request:
         required_approving_review_count: 0
@@ -40,7 +44,6 @@ branch_rulesets:
       ref_name:
         include:
           - "~DEFAULT_BRANCH"
-          - "maint-*"
         exclude: []
     rules:
       pull_request:
