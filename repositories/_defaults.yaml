@@ -35,6 +35,7 @@ branch_rulesets:
         include:
           - "~DEFAULT_BRANCH"
           - "maint-*"
+          - "release/*"
         exclude: []
     rules:
       creation: false
