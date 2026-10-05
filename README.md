@@ -347,6 +347,22 @@ are de-duplicated:
 - `conditions.ref_name.exclude`
 - `rules.required_status_checks.required_check`
 
+A category or repository can opt out of the inherited
+include patterns with
+`conditions.ref_name.include_override`, which replaces the
+whole include list instead of extending it (repo overrides
+category). Use it when a repository must protect fewer
+refs than the org defaults declare:
+
+```yaml
+branch_rulesets:
+  main-branch-protection:
+    conditions:
+      ref_name:
+        include_override:
+          - "~DEFAULT_BRANCH"
+```
+
 `rules.required_code_scanning.required_code_scanning_tool`
 is merged by tool name with repo > category > org
 precedence. A lower tier can override thresholds for an
