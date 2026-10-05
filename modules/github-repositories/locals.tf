@@ -132,6 +132,7 @@ locals {
   # Merge strategy per field type:
   #   - Scalars:        repo > category > org  (coalesce)
   #   - Additive lists: concat all tiers, deduplicated  (conditions, required_check)
+  #   - include_override:        full replacement when set at repo or category level
   #   - required_check_override: full replacement when set at repo or category level
   #   - bypass_actors:  full replacement when set explicitly; otherwise additive via extra_bypass_actors
   #   - merge_queue:    highest-priority tier that defines it wins entirely
@@ -166,15 +167,23 @@ locals {
       ))
 
       # Ref conditions are additive: include/exclude lists are concatenated across tiers.
+      # `include_override` at the repo or category tier replaces the inherited
+      # include list entirely, so a repo can drop patterns it inherits.
       # Short branch names (e.g. "main") are expanded to "refs/heads/main".
       conditions = {
         ref_name = {
           include = [
-            for ref in distinct(concat(
-              try(pair.org_rs.conditions.ref_name.include, []),
-              try(pair.cat_rs.conditions.ref_name.include, []),
-              try(pair.repo_rs.conditions.ref_name.include, [])
-            )) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "refs/heads/${ref}"
+            for ref in(
+              try(pair.repo_rs.conditions.ref_name.include_override, null) != null
+              ? pair.repo_rs.conditions.ref_name.include_override
+              : try(pair.cat_rs.conditions.ref_name.include_override, null) != null
+              ? pair.cat_rs.conditions.ref_name.include_override
+              : distinct(concat(
+                try(pair.org_rs.conditions.ref_name.include, []),
+                try(pair.cat_rs.conditions.ref_name.include, []),
+                try(pair.repo_rs.conditions.ref_name.include, [])
+              ))
+            ) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "refs/heads/${ref}"
           ]
           exclude = [
             for ref in distinct(concat(
