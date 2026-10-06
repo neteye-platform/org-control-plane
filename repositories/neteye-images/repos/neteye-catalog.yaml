@@ -1,5 +1,5 @@
-name: neteye-operator-catalog
-description: NetEye Kubernetes operator Catalog
+name: neteye-catalog
+description: NetEye Kubernetes Catalog
 topics:
   - neteye
   - golang
