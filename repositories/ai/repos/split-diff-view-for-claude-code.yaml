@@ -1,0 +1,19 @@
+name: split-diff-view-for-claude-code
+description: Claude Code mod that draws Edit and Write diffs in two side-by-side columns
+topics:
+  - ai
+  - claude
+  - claude-code
+  - claude-code-hooks
+  - claude-code-mods
+  - claude-code-plugin
+  - claude-mods
+  - developer-tools
+  - function-hooks
+  - diff
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
