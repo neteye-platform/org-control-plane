@@ -1,0 +1,15 @@
+name: neteye-agent
+description: Fleet management for NetEye agents based on OpenTelemetry OpAMP
+topics:
+  - agent
+  - fleet-management
+  - neteye
+  - opamp
+  - opentelemetry
+  - rust
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
