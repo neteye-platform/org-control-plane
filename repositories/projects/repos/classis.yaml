@@ -1,8 +1,11 @@
-name: neteye-agent
-description: Fleet management for NetEye agents based on OpenTelemetry OpAMP
+name: classis
+description: Fleet management for agents based on OpenTelemetry OpAMP
 topics:
   - agent
-  - neteye
+  - fleet-management
+  - opamp
+  - opentelemetry
+  - rust
 is_template: false
 archived: false
 template:
