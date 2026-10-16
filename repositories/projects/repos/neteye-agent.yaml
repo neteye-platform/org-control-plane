@@ -1,5 +1,5 @@
 name: neteye-agent
-description: Agent for NetEye
+description: Fleet management for NetEye agents based on OpenTelemetry OpAMP
 topics:
   - agent
   - neteye
