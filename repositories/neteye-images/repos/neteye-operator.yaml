@@ -34,3 +34,5 @@ branch_rulesets:
             integration_id: 15368 # GH Actions
           - context: "OLM bundle"
             integration_id: 15368 # GH Actions
+          - context: "Require PR Label"
+            integration_id: 15368 # GH Actions
