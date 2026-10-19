@@ -1,0 +1,14 @@
+name: classis
+description: Fleet management for agents based on OpenTelemetry OpAMP
+topics:
+  - agent
+  - fleet-management
+  - opamp
+  - opentelemetry
+  - rust
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
