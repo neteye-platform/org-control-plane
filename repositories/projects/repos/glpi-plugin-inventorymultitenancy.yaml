@@ -12,3 +12,21 @@ template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "Tests Status"
+            integration_id: 15368 # GH Actions
+
+  # Allow only NetEye Steward to tag since the version is bumped
+  # inside the setup.php file and the tag is created by a workflow
+  main-tag-protection:
+    bypass_actors:
+      - actor_id: 3017534 # neteye-steward
+        actor_type: Integration
+        bypass_mode: always
+    rules:
+      creation: true
