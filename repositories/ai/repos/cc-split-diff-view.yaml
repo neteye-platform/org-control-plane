@@ -25,3 +25,13 @@ branch_rulesets:
         required_check:
           - context: "Tests"
             integration_id: 15368 # GH Actions
+
+  # Allow only NetEye Steward to tag since the version is bumped
+  # inside the .claude-plugin/plugin.json file and the tag is created by a workflow
+  main-tag-protection:
+    bypass_actors:
+      - actor_id: 3017534 # neteye-steward
+        actor_type: Integration
+        bypass_mode: always
+    rules:
+      creation: true
