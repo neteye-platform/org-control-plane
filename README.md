@@ -432,6 +432,32 @@ for available fields.
 [tf-team]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team
 [tf-membership]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team_membership
 
+#### Organization Roles
+
+A team can be granted organization roles (for example
+`security_manager`) through the optional `org_roles` list.
+Each entry is the role **name** as shown in the GitHub
+organization settings:
+
+```yaml
+org_roles:
+  - security_manager
+```
+
+The module looks up the role IDs with the
+[`github_organization_roles`][tf-org-roles] data source and
+binds each role to the team with the
+[`github_organization_role_team`][tf-org-role-team]
+resource. An unknown role name fails the plan.
+
+Listing organization roles requires a GitHub App or token
+with permission to read organization roles. The CI GitHub
+App already has it; when planning locally, make sure your
+credentials do too.
+
+[tf-org-roles]: https://registry.terraform.io/providers/integrations/github/latest/docs/data-sources/organization_roles
+[tf-org-role-team]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/organization_role_team
+
 ### Organization Settings
 
 Org-level settings are declared in

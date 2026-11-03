@@ -23,3 +23,15 @@ resource "github_team_membership" "memberships" {
   username = each.value.username
   role     = each.value.role
 }
+
+data "github_organization_roles" "all" {}
+
+resource "github_organization_role_team" "role_bindings" {
+  for_each = {
+    for item in local.org_role_bindings :
+    "${item.team}-${item.role}" => item
+  }
+
+  role_id   = local.org_role_ids[each.value.role]
+  team_slug = github_team.teams[each.value.team].slug
+}

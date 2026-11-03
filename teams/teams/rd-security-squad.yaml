@@ -1,0 +1,9 @@
+name: rd-security-squad
+description: R&D Security Squad
+privacy: closed
+notification_setting: notifications_enabled
+# ldap_dn needs to be set manually
+
+# Organization role names (as listed by the GitHub org), optional
+org_roles:
+  - security_manager
