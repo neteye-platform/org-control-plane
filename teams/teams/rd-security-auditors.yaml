@@ -1,5 +1,5 @@
-name: rd-security-squad
-description: R&D Security Squad
+name: rd-security-auditors
+description: R&D Security Auditors
 privacy: closed
 notification_setting: notifications_enabled
 # ldap_dn needs to be set manually
