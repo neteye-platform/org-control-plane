@@ -1,514 +1,206 @@
 # GitHub Organization Control Plane
 
-Infrastructure-as-code for the
-[neteye-platform](https://github.com/neteye-platform)
-GitHub organization (NetEye / Würth IT Italy).
+Infrastructure as code for the
+[neteye-platform](https://github.com/neteye-platform) GitHub organization.
+The organization settings, the teams and the repositories are YAML files.
+Terraform and Terragrunt apply them with a GitHub App. A pull request shows the
+plan of each unit in a comment, and a merge to `main` applies it. A unit
+without changes gets no comment.
 
-Repositories, teams, and organization settings are declared
-as YAML files and reconciled through Terraform with
-Terragrunt orchestration. Changes are proposed via pull
-request, planned automatically in CI, and applied on merge.
+> **Production impact:** every change merged to `main` changes the live
+> GitHub organization. Read the plan before you approve.
 
-> **Production impact:** every change merged to `main`
-> targets the live GitHub organization. Review plans
-> carefully before approving.
-
-## Repository Structure
+## Layout
 
 ```text
-.
-├── root.hcl                         # Remote state + provider
-├── org-settings/                    # Org-level settings
-│   ├── settings.yaml                # Settings values
-│   └── terragrunt.hcl
-├── teams/                           # Team management
-│   ├── terragrunt.hcl
-│   └── teams/
-│       └── *.yaml                   # One file per team
-├── repositories/                    # Repo management
-│   ├── _defaults.yaml               # Org-wide defaults
-│   └── <category>/
-│       ├── _category_defaults.yaml  # Optional overrides
-│       ├── terragrunt.hcl
-│       └── repos/
-│           └── *.yaml               # One file per repo
-├── modules/                         # Terraform modules
-│   ├── github-org-settings/
-│   ├── github-repositories/
-│   └── github-teams/
-└── .github/workflows/
-    ├── plan.yaml                    # Plan on PR
-    ├── apply.yaml                   # Apply on merge
-    ├── plan-core.yaml               # Reusable plan job
-    ├── apply-core.yaml              # Reusable apply job
-    └── generate-matrix.yaml         # Discovers Terragrunt units
+org-settings/settings.yaml          organization settings
+teams/teams/<team>.yaml             one file per team
+repositories/_defaults.yaml         defaults of all repositories
+repositories/<category>/_defaults.yaml   defaults of a category (`{}` if none)
+repositories/<category>/<repo>.yaml one file per repository
+modules/                            Terraform modules
+schemas/                            JSON Schemas of the YAML files (generated)
 ```
 
-Each top-level directory that contains a `terragrunt.hcl`
-is a **Terragrunt unit**. The CI matrix is generated from
-these directories automatically, so adding a new repository
-category requires adding a `terragrunt.hcl` to its folder.
+Every unit has its own Terraform state: `org-settings`, `teams` and each
+repository category. A new category is a new directory under `repositories/`
+with a `_defaults.yaml` file, which holds `{}` if the category has no
+defaults.
 
-## Prerequisites
+CI runs all units with `terragrunt run --all`: the categories run in parallel,
+after `teams`, because repositories grant access to teams. On a pull request,
+each unit with changes gets its own comment. On merge, the units apply in the
+same order.
 
-Terraform and Terragrunt are pinned separately:
+## Editing the YAML files
 
-- **Terraform** — version in `.terraform-version`
-- **Terragrunt** — version in `mise.toml`
+Each YAML file starts with a `yaml-language-server` comment that points to its
+JSON Schema, so the editor completes and documents every field. The pre-commit
+hooks validate the files against the schemas. The schemas are generated from
+the types of the module variables: after a change to a `variables.tf`, run
+`python3 scripts/generate-schemas.py` (the pre-commit hook does it for you).
 
-## Authentication
+## Organization settings
 
-### CI
+`org-settings/settings.yaml` holds the profile (name, description, blog,
+location, ...), the base permission of the members, what members can create,
+and the security features enabled on new repositories. All fields are
+required, except `twitter_username`. The billing email comes from SSM
+Parameter Store, see [Credentials](#credentials).
 
-GitHub Actions authenticates via a
-[GitHub App](https://docs.github.com/en/apps).
-S3 remote state uses AWS credentials.
-The required variables are configured as repository
-secrets and variables.
+## Teams
 
-### Local
+One file per team in `teams/teams/`. The file name must match `name`.
 
-To run `terragrunt plan` locally you need the same
-environment variables. Export them before running any
-command:
+| Field | Description |
+| --- | --- |
+| `name`, `description` | Team name and description (required). |
+| `privacy` | `secret` or `closed` (required). |
+| `notification_setting` | `notifications_enabled` or `notifications_disabled` (required). |
+| `parent_team_id` | ID of the parent team (optional). |
+| `org_roles` | Organization roles assigned to the team, by name (optional). |
 
-```bash
-# GitHub App credentials
-export GITHUB_APP_ID="..."
-export GITHUB_APP_INSTALLATION_ID="..."
-export GITHUB_APP_PEM_FILE="..."
+## Repositories
 
-# AWS credentials for S3 remote state
-export AWS_ACCESS_KEY_ID="..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_REGION="..."
+One file per repository in `repositories/<category>/`. The file name must match
+`name`, and a repository name must be unique across all categories. The schema
+of this repository also requires `description` and at least one topic.
 
-# Terraform variables
-export TF_VAR_github_org="neteye-platform"
-export TF_VAR_aws_region="$AWS_REGION"
-export TF_VAR_billing_email="..."
-```
+Settings merge in three tiers. The most specific tier wins:
 
-## Configuration
+1. `repositories/_defaults.yaml`: all repositories.
+2. `repositories/<category>/_defaults.yaml`: the repositories of the category.
+   Every category has this file, with `{}` when it has no defaults.
+3. `repositories/<category>/<repo>.yaml`: one repository.
 
-### Adding a Repository
+### General settings
 
-Create a YAML file in
-`repositories/<category>/repos/`:
+Every field of the
+[`github_repository`](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository)
+resource that the schema lists: visibility, features (issues, wiki, ...),
+merge options, `topics`, `template`, `archived` and more. A scalar field comes
+from the most specific tier that sets it.
 
-```yaml
-name: my-website
-description: My website repository.
-homepage_url: https://example.com
-topics:
-  - website
-  - web
-```
+### Access
 
-`topics` is always required, every repo needs at least one.
-Other fields are required only when they differ from the defaults.
-Settings are merged in three tiers:
+| Field | Merge rule |
+| --- | --- |
+| `team_access` | List of `team` (slug) and `permission`. The most specific tier that sets it replaces the inherited list. |
+| `extra_team_access` | Category or repository tier: adds to the inherited `team_access`, or overrides the permission of a team. |
+| `user_access` | Same as `team_access`, for collaborators (`username`). An added user gets an invitation. |
+| `extra_user_access` | Same as `extra_team_access`, for collaborators. |
 
-1. `repositories/_defaults.yaml` — org-wide defaults
-2. `repositories/<category>/_category_defaults.yaml` —
-   optional category overrides
-3. `repositories/<category>/repos/<name>.yaml` —
-   per-repo settings
-
-To create a new repository **category**, add a directory
-under `repositories/` with its own `terragrunt.hcl`
-(copy from an existing category such as `websites/`).
-
-See the [`github_repository`][tf-repo] resource docs
-for the full list of available fields.
-
-[tf-repo]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository
-
-### Team Access
-
-Repository team permissions are managed through the `team_access` YAML list.
-Each entry specifies a team slug and one of the GitHub permission levels:
-`pull` (read), `triage`, `push` (write), `maintain`, or `admin`.
-
-The org-wide default in `repositories/_defaults.yaml` applies to every
-repository:
-
-```yaml
-team_access:
-  - team: rd-developers
-    permission: push
-```
-
-`team_access` is inherited by default from the highest tier that sets it.
-A category-level `team_access` replaces the org default; a repo-level
-`team_access` replaces both category and org values.
-
-Use `extra_team_access` to keep the inherited `team_access` list and add
-or override entries (matched by team slug) at the category or repo tier:
-
-```yaml
-# Keep inherited teams and grant rd-developers maintain access,
-# plus add a new team for this repo only.
-extra_team_access:
-  - team: rd-developers
-    permission: maintain
-  - team: my-extra-team
-    permission: push
-```
-
-Set `team_access` explicitly when the inherited list must be replaced
-instead of extended. Use an empty list to remove all team access for
-that scope:
-
-```yaml
-team_access: []
-```
-
-### User Access
-
-Repository per-user permissions are managed through the `user_access` YAML
-list, which mirrors `team_access` but takes a GitHub `username` instead of
-a team slug. Each entry uses the same permission levels: `pull` (read),
-`triage`, `push` (write), `maintain`, or `admin`.
-
-`user_access` follows the same inheritance rules as `team_access`: the
-highest tier that defines it wins entirely; lower tiers are not merged
-in. Collaborators are usually scoped to a single repository, so this
-list is typically declared per-repo:
-
-```yaml
-user_access:
-  - username: external-contributor
-    permission: push
-```
-
-Use `extra_user_access` to keep the inherited `user_access` list and add
-or override entries (matched by username) at the category or repo tier:
-
-```yaml
-extra_user_access:
-  - username: external-contributor
-    permission: maintain
-```
-
-Use an empty list to remove all user access for that scope:
-
-```yaml
-user_access: []
-```
-
-Adding a user creates a pending GitHub invitation that the user must
-accept before gaining access; pending invitations do not expire.
-Destroying the resource revokes the invitation if unaccepted, otherwise
-removes the collaborator. See the
-[`github_repository_collaborator`][tf-collab] resource docs for details.
-
-[tf-collab]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_collaborator
+The permission is `pull`, `triage`, `push`, `maintain` or `admin`. The
+"category or repository tier" fields have no effect in the org defaults, and
+their schema rejects them.
 
 ### Labels
 
-Repository issue and pull-request labels are managed through the `labels`
-YAML list. Each entry has a `name`, a 6-digit hex `color` (without the
-leading `#`), and a `description`:
+| Field | Merge rule |
+| --- | --- |
+| `labels` | List of `name`, `color` and `description`. The most specific tier that sets it replaces the inherited list. |
+| `extra_labels` | Category or repository tier: adds labels. A name already in `labels` is not overridden. |
 
-```yaml
-labels:
-  - name: bug
-    color: D73A4A
-    description: "Something isn't working"
-  - name: feature
-    color: 3DB6D1
-    description: "New feature or request"
-```
+The final list is authoritative: the control plane deletes every other label,
+GitHub defaults included.
 
-`labels` is inherited from the highest tier that sets it. A category-level
-`labels` replaces the org default; a repo-level `labels` replaces both.
-Define org-wide defaults in `repositories/_defaults.yaml` to apply them to
-every repository.
+### Rulesets
 
-Use `extra_labels` at the category or repo tier to **add** labels alongside
-the inherited `labels` list. Unlike `extra_team_access`, `extra_labels`
-**cannot override** entries already defined in `labels` — names already
-present in the base set are kept as-is. Within `extra_labels`, repo entries
-override category entries by name (most-specific wins).
+`branch_rulesets` maps a ruleset name to its settings. A tier can change an
+inherited ruleset or add a new one. Ruleset fields merge one by one:
 
-```yaml
-extra_labels:
-  - name: my-custom-label
-    color: FBCA04
-    description: "Using this label will be fun!"
-```
+| Field | Merge rule |
+| --- | --- |
+| `target`, `enforcement`, rule flags, `pull_request`, `copilot_code_review` and `required_status_checks` flags | The most specific tier that sets the field wins. |
+| `conditions.ref_name.include`, `exclude` | Added from every tier. A short name like `main` becomes `refs/heads/main`, or `refs/tags/main` in a tag ruleset. |
+| `conditions.ref_name.include_override` | Category or repository tier: replaces the inherited `include`. |
+| `bypass_actors` | The most specific tier that sets it replaces the inherited list. `[]` removes all actors. |
+| `extra_bypass_actors` | Added from every tier. |
+| `rules.required_status_checks.required_check` | Added from every tier. |
+| `rules.required_status_checks.required_check_override` | Category or repository tier: replaces the inherited checks. |
+| `rules.required_code_scanning.required_code_scanning_tool` | Merged by tool name, the most specific tier wins. |
+| `rules.merge_queue` | The most specific tier that sets it replaces the inherited object. |
 
-To change the color or description of an inherited label, override it at
-the appropriate tier by adding it to that tier's `labels:` list. Use an
-empty list to remove all labels for that scope:
+Repositories and rulesets have `prevent_destroy`: to remove one, first remove
+it from the state.
 
-```yaml
-labels: []
-```
+## Running locally
 
-Labels are managed with the authoritative
-[`github_issue_labels`][tf-labels] resource: **any label that exists on
-the repository but is not present in the merged `labels`/`extra_labels`
-result is deleted**, including GitHub's auto-generated defaults (e.g.
-`bug`, `enhancement`, `good first issue`). Declare every label you want
-to keep — the org-wide `labels` list in `repositories/_defaults.yaml`
-already covers the common set.
-
-Renaming a label (changing its `name`) deletes the old label and creates
-a new one, detaching it from any issues or pull requests it was
-previously attached to. Changing only the `color` or `description`
-updates the existing label in place.
-
-[tf-labels]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/issue_labels
-
-### Branch Rulesets
-
-Repository branch protection is managed with
-[GitHub rulesets][tf-ruleset] through the `branch_rulesets`
-YAML map. Each key is the ruleset name. The org-wide
-defaults are declared in `repositories/_defaults.yaml`
-and apply to every repository. Categories and individual
-repositories can override existing rulesets or define
-additional ones.
-
-[tf-ruleset]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset
-
-```yaml
-branch_rulesets:
-  main-branch-protection:
-    target: branch
-    enforcement: active
-    bypass_actors:
-      - actor_id: 0
-        actor_type: OrganizationAdmin
-        bypass_mode: pull_request
-    conditions:
-      ref_name:
-        include:
-          - main
-        exclude: []
-    rules:
-      creation: true
-      deletion: true
-      update: true
-      non_fast_forward: true
-      required_linear_history: true
-      required_signatures: true
-      pull_request:
-        allowed_merge_methods:
-          - "squash"
-        required_approving_review_count: 1
-        dismiss_stale_reviews_on_push: true
-        require_last_push_approval: true
-        require_code_owner_review: true
-        required_review_thread_resolution: true
-      required_status_checks:
-        strict_required_status_checks_policy: true
-        required_check:
-          - context: >-
-              common-pull-request-checks / pre-commit-checks / Pre-commit Checks
-            integration_id: 15368 # GH Actions
-      required_code_scanning:
-        required_code_scanning_tool:
-          - tool: CodeQL
-            alerts_threshold: errors
-            security_alerts_threshold: critical
-      merge_queue:
-        grouping_strategy: ALLGREEN
-        merge_method: SQUASH
-        check_response_timeout_minutes: 60
-        min_entries_to_merge: 1
-        max_entries_to_merge: 5
-        min_entries_to_merge_wait_minutes: 5
-        max_entries_to_build: 5
-      copilot_code_review:
-        review_on_push: true
-        review_draft_pull_requests: false
-```
-
-#### Merge behaviour
-
-Scalar fields use normal precedence: repository overrides
-category, category overrides org defaults. This applies to
-fields such as `target`, `enforcement`, individual rule
-booleans, pull request settings, required status check
-settings, and Copilot review settings.
-
-Rulesets are matched by name across tiers. A category or
-repository that defines a ruleset with the same key as an
-org default overrides its fields. A new key adds a
-ruleset that only applies to that category or repository.
-
-The following lists are **additive** across all tiers and
-are de-duplicated:
-
-- `conditions.ref_name.include`
-- `conditions.ref_name.exclude`
-- `rules.required_status_checks.required_check`
-
-A category or repository can opt out of the inherited
-include patterns with
-`conditions.ref_name.include_override`, which replaces the
-whole include list instead of extending it (repo overrides
-category). Use it when a repository must protect fewer
-refs than the org defaults declare:
-
-```yaml
-branch_rulesets:
-  main-branch-protection:
-    conditions:
-      ref_name:
-        include_override:
-          - "~DEFAULT_BRANCH"
-```
-
-`rules.required_code_scanning.required_code_scanning_tool`
-is merged by tool name with repo > category > org
-precedence. A lower tier can override thresholds for an
-inherited tool or add new tools.
-
-Branch names in `conditions.ref_name.include` and
-`conditions.ref_name.exclude` may be written as short
-names such as `main`. The module expands them to
-`refs/heads/main`. Fully qualified refs and GitHub ruleset
-tokens such as `~DEFAULT_BRANCH` are preserved.
-
-`rules.merge_queue`, when configured, is not merged
-field-by-field. The highest-priority tier that defines it
-wins entirely: repository, then category, then org
-defaults.
-
-#### Bypass actors
-
-`bypass_actors` is taken from the **first** tier that
-defines it, exclusively: repository overrides category,
-category overrides org defaults. Use an empty list to
-remove all bypass actors for that scope:
-
-```yaml
-branch_rulesets:
-  main-branch-protection:
-    bypass_actors: []
-```
-
-`extra_bypass_actors` from **all** tiers (org, category,
-repo) are **always** appended to the final list, regardless
-of which tier provided the base `bypass_actors`:
-
-```yaml
-branch_rulesets:
-  main-branch-protection:
-    extra_bypass_actors:
-      - actor_id: 5
-        actor_type: RepositoryRole
-        bypass_mode: pull_request
-```
-
-This means a repo can override the base `bypass_actors`
-while still contributing extra actors alongside those from
-category or org — and vice versa.
-
-### Adding a Team
-
-Create a YAML file in `teams/teams/`:
-
-```yaml
-name: my-team
-description: My team description.
-privacy: closed
-notification_setting: notifications_enabled
-members:
-  - username: octocat
-    role: maintainer
-  - username: hubot
-    role: member
-```
-
-See the [`github_team`][tf-team] and
-[`github_team_membership`][tf-membership] resource docs
-for available fields.
-
-[tf-team]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team
-[tf-membership]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/team_membership
-
-#### Organization Roles
-
-A team can be granted organization roles (for example
-`security_manager`) through the optional `org_roles` list.
-Each entry is the role **name** as shown in the GitHub
-organization settings:
-
-```yaml
-org_roles:
-  - security_manager
-```
-
-The module looks up the role IDs with the
-[`github_organization_roles`][tf-org-roles] data source and
-binds each role to the team with the
-[`github_organization_role_team`][tf-org-role-team]
-resource. An unknown role name fails the plan.
-
-Listing organization roles requires a GitHub App or token
-with permission to read organization roles. The CI GitHub
-App already has it; when planning locally, make sure your
-credentials do too.
-
-[tf-org-roles]: https://registry.terraform.io/providers/integrations/github/latest/docs/data-sources/organization_roles
-[tf-org-role-team]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/organization_role_team
-
-### Organization Settings
-
-Org-level settings are declared in
-`org-settings/settings.yaml`. Edit the YAML file to change
-settings such as default repository permissions, security
-scanning defaults, and member privileges. `billing_email`
-is injected at plan/apply time from the
-`TF_VAR_billing_email` environment variable.
-
-See the [`github_organization_settings`][tf-org] resource
-docs for the full list of available fields.
-
-[tf-org]: https://registry.terraform.io/providers/integrations/github/latest/docs/resources/organization_settings
-
-## CI/CD Workflows
-
-- **Common checks** — shared workflows imported from
-  [repo-commons][rc] for PR validation, scheduled
-  scans, and on-demand checks.
-- **Terragrunt Plan** (`plan.yaml`) — runs on every PR
-  to `main`. Plans each unit and posts results as PR
-  comments.
-- **Terraform Apply** (`apply.yaml`) — triggers on push
-  to `main`. Applies each unit to the production
-  environment.
-
-Both plan and apply workflows use `generate-matrix.yaml`
-to discover Terragrunt units automatically from the
-directory structure.
-
-[rc]: https://github.com/neteye-platform/repo-commons
-
-## Local Development
+Install the pinned tools with [mise](https://mise.jdx.dev), then log in to
+AWS with the [AWS CLI](https://aws.amazon.com/cli/), which Terragrunt also
+uses to read the credentials:
 
 ```bash
-# Install Terragrunt (via mise)
 mise install
-
-# Plan a single unit
-terragrunt plan --terragrunt-working-dir teams
-
-# Plan all units from the repo root
-terragrunt run-all plan
+aws sso login   # or any other way to get AWS credentials
 ```
+
+Then run Terragrunt from the repository root:
+
+```bash
+terragrunt run --all plan                                     # all units
+terragrunt plan --working-dir teams                           # one unit
+terragrunt stack generate --working-dir repositories          # one category:
+terragrunt plan --working-dir repositories/.terragrunt-stack/ai
+```
+
+## Credentials
+
+Terragrunt reads the credentials from AWS. No other environment variable is
+needed, locally or in CI.
+
+- The state is in the S3 bucket set in `root.hcl`.
+- The parameters below are in SSM Parameter Store, in the region set in
+  `root.hcl`, under the prefix `/org-control-plane`:
+
+| Parameter | Type | Value |
+| --- | --- | --- |
+| `github-app/app-id` | String | ID of the GitHub App that Terraform uses |
+| `github-app/installation-id` | String | ID of the App installation on the organization |
+| `github-app/private-key` | SecureString | Private key (PEM) of the App |
+| `org-settings/billing-email` | SecureString | Billing email of the organization |
+
+The AWS identity needs read and write access to the state bucket, and
+`ssm:GetParametersByPath` on the prefix, and `kms:Decrypt` on the key of the
+SecureString parameters. CI uses the
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` repository secrets. The
+region is also set in `plan.yaml` and `apply.yaml`.
+
+A second GitHub App writes the plan comments, so it needs "Pull requests:
+write" on this repository. Only CI uses it, with the `NETEYE_APP_ID`
+repository variable and the `NETEYE_APP_PRIVATE_KEY` repository secret.
+
+## Tests
+
+- `terraform test` in each module directory tests the merge rules and the
+  resources, with a mocked provider (run `terraform init -backend=false`
+  first).
+- `python3 -m unittest discover -s tests` tests the schema generator and the
+  scripts of the workflows. It needs `node`, `bash` and `jq`.
+
+CI runs both: the first in the plan workflow, the second with the pre-commit
+hooks.
+
+## Versions
+
+Terraform and Terragrunt are pinned in `mise.toml` with checksums in
+`mise.lock`. The GitHub provider is pinned in the modules, and the single
+`.terraform.lock.hcl` at the root pins its checksums for every unit. Renovate
+updates all of them.
+
+## Reusing the modules
+
+The modules in `modules/` do not depend on this repository. Another repository
+can use them as a Terragrunt or Terraform source pinned to a commit, for
+example
+`git::https://github.com/neteye-platform/org-control-plane.git//modules/github-repositories?ref=<commit>`.
+The module variables document the inputs, and the tests in `modules/*/tests`
+show examples.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for the vulnerability
-disclosure policy.
+See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
 
 ## License
 
-Dual-licensed under [Apache 2.0](LICENSE-APACHE) and
-[MIT](LICENSE-MIT).
+Dual-licensed under [Apache 2.0](LICENSE-APACHE) and [MIT](LICENSE-MIT).

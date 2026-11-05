@@ -1,4 +1,4 @@
-# Terragrunt configuration for GitHub organization team management
+# One team per YAML file in teams/
 
 include "root" {
   path   = find_in_parent_folders("root.hcl")
@@ -9,7 +9,13 @@ terraform {
   source = "${get_repo_root()}//modules/github-teams"
 }
 
+locals {
+  teams_dir = "${get_terragrunt_dir()}/teams"
+}
+
 inputs = {
-  # Path to directory containing team YAML files
-  teams_yaml_dir = "${get_terragrunt_dir()}/teams"
+  teams = {
+    for f in fileset(local.teams_dir, "*.yaml") :
+    trimsuffix(f, ".yaml") => yamldecode(file("${local.teams_dir}/${f}"))
+  }
 }

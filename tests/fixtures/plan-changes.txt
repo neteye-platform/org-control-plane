@@ -1,0 +1,58 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+  ~ update in-place
+  - destroy
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # terraform_data.del will be destroyed
+  # (because terraform_data.del is not in configuration)
+  - resource "terraform_data" "del" {
+      - id     = "336c7ff1-8953-ab86-356a-95b04886d571" -> null
+      - input  = "x" -> null
+      - output = "x" -> null
+    }
+
+  # terraform_data.old has moved to terraform_data.moved
+    resource "terraform_data" "moved" {
+        id     = "646c7f67-135d-40d3-7dea-2ba64a227a82"
+        # (2 unchanged attributes hidden)
+    }
+
+  # terraform_data.new will be created
+  + resource "terraform_data" "new" {
+      + id     = (known after apply)
+      + input  = "y"
+      + output = (known after apply)
+    }
+
+  # terraform_data.rep must be replaced
+-/+ resource "terraform_data" "rep" {
+      ~ id               = "51ad4ff1-fe13-ac62-8ac1-860575ef4ddf" -> (known after apply)
+      ~ output           = "x" -> (known after apply)
+      + triggers_replace = [
+          + "now",
+        ]
+        # (1 unchanged attribute hidden)
+    }
+
+  # terraform_data.upd will be updated in-place
+  ~ resource "terraform_data" "upd" {
+        id     = "efb36c28-38b6-e2e9-ecce-11da59c2c257"
+      ~ input  = {
+          ~ b = "2" -> "3"
+            # (1 unchanged attribute hidden)
+        }
+      ~ output = {
+          - a = "1"
+          - b = "2"
+        } -> (known after apply)
+    }
+
+Plan: 2 to add, 1 to change, 2 to destroy.
+
+Changes to Outputs:
+  + o = "changed"

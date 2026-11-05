@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: org-control-plane
+description: Centralized control plane for managing organization infrastructure using Terragrunt
+topics:
+  - devops
+  - github
+  - infrastructure-as-code
+  - terraform
+  - terragrunt
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    bypass_actors: []
+    rules:
+      pull_request:
+        required_approving_review_count: 3
+      required_status_checks:
+        required_check:
+          - context: "Terragrunt Plan Status"
+            integration_id: 15368 # GH Actions
+  main-tag-protection:
+    bypass_actors: []

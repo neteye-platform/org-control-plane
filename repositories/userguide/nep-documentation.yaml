@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: nep-documentation
+description: NetEye Userguide | NEP
+topics:
+  - neteye
+  - docs
+  - documentation
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
+
+extra_team_access:
+  - team: neteye-nep-admins
+    permission: push

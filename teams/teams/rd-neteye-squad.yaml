@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: rd-neteye-squad
 description: R&D Neteye Squad
 privacy: closed

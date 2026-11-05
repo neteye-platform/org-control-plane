@@ -1,6 +1,5 @@
+# yaml-language-server: $schema=../schemas/org-settings.schema.json
 # Organization-wide settings for the GitHub organization.
-# billing_email is injected at plan/apply time from the
-# TF_VAR_billing_email environment variable.
 
 company: "Würth IT Italy"
 blog: "https://neteye.guide"

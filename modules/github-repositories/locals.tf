@@ -1,15 +1,26 @@
 locals {
-  yaml_files     = fileset(var.repos_yaml_dir, "*.yaml")
-  _decoded_yamls = [for f in local.yaml_files : yamldecode(file("${var.repos_yaml_dir}/${f}"))]
-  repo_yamls     = { for y in local._decoded_yamls : y.name => y }
+  # The three tiers, from the most generic to the most specific. A tier that is
+  # not set, or null (an empty YAML file), gives null with
+  # `try(local.<tier>.<field>, null)`, like a field the tier does not set.
+  org      = try(var.settings.defaults.org, {})
+  category = try(var.settings.defaults.category, {})
+  repo     = coalesce(try(var.settings.repositories, null), {})
 
-  # Three-tier merge for repository settings (org → category → repo)
+  # Fields each defaults tier sets. Unset fields are null and must not
+  # override a value from a more generic tier.
+  _org_set      = try({ for k, v in local.org : k => v if v != null }, {})
+  _category_set = try({ for k, v in local.category : k => v if v != null }, {})
+
+  # Three-tier merge for repository settings (org → category → repo). The repo
+  # object comes first so that every field exists, null when no tier sets it.
   repos = {
-    for name, yaml in local.repo_yamls :
+    for name, repo in local.repo :
     name => merge(
-      var.org_defaults,
-      var.category_defaults,
-      yaml,
+      repo,
+      local._org_set,
+      local._category_set,
+      { for k, v in repo : k => v if v != null },
+      { name = name },
     )
   }
 
@@ -20,27 +31,23 @@ locals {
   # list and add/override individual entries by team slug.
   team_access_configs = {
     for pair in flatten([
-      for repo_name in keys(local.repos) : [
+      for repo_name, repo in local.repo : [
         for slug, entry in merge(
           # Base list: highest tier that explicitly sets team_access wins.
           {
             for t in(
-              try(local.repo_yamls[repo_name].team_access, null) != null
-              ? local.repo_yamls[repo_name].team_access
-              : try(var.category_defaults.team_access, null) != null
-              ? var.category_defaults.team_access
-              : try(var.org_defaults.team_access, [])
+              repo.team_access != null ? repo.team_access
+              : try(local.category.team_access, null) != null ? local.category.team_access
+              : coalesce(try(local.org.team_access, null), [])
             ) : t.team => t
           },
           # Additive overrides keyed by team slug (category then repo).
           {
             for t in(
-              try(local.repo_yamls[repo_name].team_access, null) == null
-              ? try(var.category_defaults.extra_team_access, [])
-              : []
+              repo.team_access == null ? coalesce(try(local.category.extra_team_access, null), []) : []
             ) : t.team => t
           },
-          { for t in try(local.repo_yamls[repo_name].extra_team_access, []) : t.team => t }
+          { for t in coalesce(repo.extra_team_access, []) : t.team => t }
           ) : {
           repo_name  = repo_name
           team       = slug
@@ -57,27 +64,23 @@ locals {
   # list and add/override individual entries by username.
   user_access_configs = {
     for pair in flatten([
-      for repo_name in keys(local.repos) : [
+      for repo_name, repo in local.repo : [
         for username, entry in merge(
           # Base list: highest tier that explicitly sets user_access wins.
           {
             for u in(
-              try(local.repo_yamls[repo_name].user_access, null) != null
-              ? local.repo_yamls[repo_name].user_access
-              : try(var.category_defaults.user_access, null) != null
-              ? var.category_defaults.user_access
-              : try(var.org_defaults.user_access, [])
+              repo.user_access != null ? repo.user_access
+              : try(local.category.user_access, null) != null ? local.category.user_access
+              : coalesce(try(local.org.user_access, null), [])
             ) : u.username => u
           },
           # Additive overrides keyed by username (category then repo).
           {
             for u in(
-              try(local.repo_yamls[repo_name].user_access, null) == null
-              ? try(var.category_defaults.extra_user_access, [])
-              : []
+              repo.user_access == null ? coalesce(try(local.category.extra_user_access, null), []) : []
             ) : u.username => u
           },
-          { for u in try(local.repo_yamls[repo_name].extra_user_access, []) : u.username => u }
+          { for u in coalesce(repo.extra_user_access, []) : u.username => u }
           ) : {
           repo_name  = repo_name
           username   = username
@@ -97,33 +100,29 @@ locals {
   #     inherited defaults. Within extra_labels, repo overrides category by
   #     name (most-specific wins).
   labels_by_repo = {
-    for repo_name in keys(local.repos) : repo_name => values(merge(
-      # extra_labels from category and repo (additive, lowest priority).
+    for repo_name, repo in local.repo : repo_name => values(merge(
+      # extra_labels from category then repo (additive, lowest priority).
       # Listed first so the base-labels block below can shadow them by name.
       {
-        for l in concat(
-          try(local.repo_yamls[repo_name].labels, null) == null ? try(var.category_defaults.extra_labels, []) : [],
-          try(local.repo_yamls[repo_name].extra_labels, []),
-        ) : l.name => l
+        for l in(repo.labels == null ? coalesce(try(local.category.extra_labels, null), []) : []) : l.name => l
       },
+      { for l in coalesce(repo.extra_labels, []) : l.name => l },
       # Base labels: highest tier that explicitly sets `labels:` wins.
       # Listed last so base names always win over extra_labels on collision.
       {
         for l in(
-          try(local.repo_yamls[repo_name].labels, null) != null
-          ? local.repo_yamls[repo_name].labels
-          : try(var.category_defaults.labels, null) != null
-          ? var.category_defaults.labels
-          : try(var.org_defaults.labels, [])
+          repo.labels != null ? repo.labels
+          : try(local.category.labels, null) != null ? local.category.labels
+          : coalesce(try(local.org.labels, null), [])
         ) : l.name => l
       },
     ))
   }
 
   # Shorthand references to each tier's branch_rulesets map
-  _org_rs_map  = try(var.org_defaults.branch_rulesets, {})
-  _cat_rs_map  = try(var.category_defaults.branch_rulesets, {})
-  _repo_rs_map = { for name, yaml in local.repo_yamls : name => try(yaml.branch_rulesets, {}) }
+  _org_rs_map  = coalesce(try(local.org.branch_rulesets, null), {})
+  _cat_rs_map  = coalesce(try(local.category.branch_rulesets, null), {})
+  _repo_rs_map = { for name, repo in local.repo : name => coalesce(repo.branch_rulesets, {}) }
 
   # Build one ruleset config per (repo, ruleset_name) combination.
   # Ruleset names are collected across all three tiers so that a category
@@ -138,7 +137,7 @@ locals {
   #   - merge_queue:    highest-priority tier that defines it wins entirely
   ruleset_configs = {
     for pair in flatten([
-      for repo_name in keys(local.repos) : [
+      for repo_name in keys(local.repo) : [
         for rs_name in toset(concat(
           keys(local._org_rs_map),
           keys(local._cat_rs_map),
@@ -149,27 +148,35 @@ locals {
           repo_rs      = try(local._repo_rs_map[repo_name][rs_name], {})
           cat_rs       = try(local._cat_rs_map[rs_name], {})
           org_rs       = try(local._org_rs_map[rs_name], {})
+          target = try(coalesce(
+            try(local._repo_rs_map[repo_name][rs_name].target, null),
+            try(local._cat_rs_map[rs_name].target, null),
+            try(local._org_rs_map[rs_name].target, null),
+          ), "branch")
         }
       ]
       ]) : "${pair.repo_name}/${pair.ruleset_name}" => {
       repo_name   = pair.repo_name
       name        = pair.ruleset_name
-      target      = try(coalesce(try(pair.repo_rs.target, null), try(pair.cat_rs.target, null), try(pair.org_rs.target, null)), "branch")
+      target      = pair.target
       enforcement = try(coalesce(try(pair.repo_rs.enforcement, null), try(pair.cat_rs.enforcement, null), try(pair.org_rs.enforcement, null)), "active")
 
       # bypass_actors: first available from repo > category > org; then
       # concat ALL extra_bypass_actors from all tiers (org, category, repo).
       bypass_actors = distinct(concat(
-        try(pair.repo_rs.bypass_actors, try(pair.cat_rs.bypass_actors, try(pair.org_rs.bypass_actors, []))),
-        try(pair.org_rs.extra_bypass_actors, []),
-        try(pair.cat_rs.extra_bypass_actors, []),
-        try(pair.repo_rs.extra_bypass_actors, [])
+        try(pair.repo_rs.bypass_actors, null) != null ? pair.repo_rs.bypass_actors
+        : try(pair.cat_rs.bypass_actors, null) != null ? pair.cat_rs.bypass_actors
+        : coalesce(try(pair.org_rs.bypass_actors, null), []),
+        coalesce(try(pair.org_rs.extra_bypass_actors, null), []),
+        coalesce(try(pair.cat_rs.extra_bypass_actors, null), []),
+        coalesce(try(pair.repo_rs.extra_bypass_actors, null), [])
       ))
 
       # Ref conditions are additive: include/exclude lists are concatenated across tiers.
       # `include_override` at the repo or category tier replaces the inherited
       # include list entirely, so a repo can drop patterns it inherits.
-      # Short branch names (e.g. "main") are expanded to "refs/heads/main".
+      # Short names are expanded: "main" to "refs/heads/main", or to
+      # "refs/tags/main" in a tag ruleset.
       conditions = {
         ref_name = {
           include = [
@@ -179,18 +186,18 @@ locals {
               : try(pair.cat_rs.conditions.ref_name.include_override, null) != null
               ? pair.cat_rs.conditions.ref_name.include_override
               : distinct(concat(
-                try(pair.org_rs.conditions.ref_name.include, []),
-                try(pair.cat_rs.conditions.ref_name.include, []),
-                try(pair.repo_rs.conditions.ref_name.include, [])
+                coalesce(try(pair.org_rs.conditions.ref_name.include, null), []),
+                coalesce(try(pair.cat_rs.conditions.ref_name.include, null), []),
+                coalesce(try(pair.repo_rs.conditions.ref_name.include, null), [])
               ))
-            ) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "refs/heads/${ref}"
+            ) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "${pair.target == "tag" ? "refs/tags" : "refs/heads"}/${ref}"
           ]
           exclude = [
             for ref in distinct(concat(
-              try(pair.org_rs.conditions.ref_name.exclude, []),
-              try(pair.cat_rs.conditions.ref_name.exclude, []),
-              try(pair.repo_rs.conditions.ref_name.exclude, [])
-            )) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "refs/heads/${ref}"
+              coalesce(try(pair.org_rs.conditions.ref_name.exclude, null), []),
+              coalesce(try(pair.cat_rs.conditions.ref_name.exclude, null), []),
+              coalesce(try(pair.repo_rs.conditions.ref_name.exclude, null), [])
+            )) : startswith(ref, "refs/") || startswith(ref, "~") ? ref : "${pair.target == "tag" ? "refs/tags" : "refs/heads"}/${ref}"
           ]
         }
       }
@@ -225,18 +232,18 @@ locals {
             : try(pair.cat_rs.rules.required_status_checks.required_check_override, null) != null
             ? pair.cat_rs.rules.required_status_checks.required_check_override
             : distinct(concat(
-              try(pair.org_rs.rules.required_status_checks.required_check, []),
-              try(pair.cat_rs.rules.required_status_checks.required_check, []),
-              try(pair.repo_rs.rules.required_status_checks.required_check, [])
+              coalesce(try(pair.org_rs.rules.required_status_checks.required_check, null), []),
+              coalesce(try(pair.cat_rs.rules.required_status_checks.required_check, null), []),
+              coalesce(try(pair.repo_rs.rules.required_status_checks.required_check, null), [])
             ))
           )
         }
 
         required_code_scanning = {
           required_code_scanning_tool = values(merge(
-            { for tool in try(pair.org_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool },
-            { for tool in try(pair.cat_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool },
-            { for tool in try(pair.repo_rs.rules.required_code_scanning.required_code_scanning_tool, []) : tool.tool => tool }
+            { for tool in coalesce(try(pair.org_rs.rules.required_code_scanning.required_code_scanning_tool, null), []) : tool.tool => tool },
+            { for tool in coalesce(try(pair.cat_rs.rules.required_code_scanning.required_code_scanning_tool, null), []) : tool.tool => tool },
+            { for tool in coalesce(try(pair.repo_rs.rules.required_code_scanning.required_code_scanning_tool, null), []) : tool.tool => tool }
           ))
         }
 
