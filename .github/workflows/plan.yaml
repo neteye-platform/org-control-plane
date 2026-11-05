@@ -5,32 +5,30 @@ on:
     branches:
       - "main"
 
-jobs:
-  generate-matrix:
-    permissions:
-      contents: read
-    uses: ./.github/workflows/generate-matrix.yaml
+# A new push replaces the plan of the previous one.
+concurrency:
+  group: terragrunt-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
+jobs:
   terragrunt-plan:
-    needs: generate-matrix
     permissions:
       contents: read
     uses: ./.github/workflows/plan-core.yaml
     with:
-      matrix: ${{ needs.generate-matrix.outputs.matrix }}
-      neteye_manager_app_id: ${{ vars.NETEYE_MANAGER_APP_ID }}
+      # Same as in root.hcl.
+      aws_region: eu-south-1
+      ssm_prefix: /org-control-plane
       neteye_app_id: ${{ vars.NETEYE_APP_ID }}
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      BILLING_EMAIL: ${{ secrets.BILLING_EMAIL }}
-      NETEYE_MANAGER_APP_PRIVATE_KEY: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
       NETEYE_APP_PRIVATE_KEY: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
 
+  # Not required any more. Remove it after the merge.
   terragrunt-plan-status:
     name: Terragrunt Plan Status
-    needs: [generate-matrix, terragrunt-plan]
+    needs: terragrunt-plan
     if: always()
     permissions:
       contents: none

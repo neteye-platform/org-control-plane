@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: neteye-nep-admins
 description: NetEye NEP Admins
 privacy: closed

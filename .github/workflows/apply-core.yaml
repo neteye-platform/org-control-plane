@@ -3,12 +3,12 @@ name: Terragrunt Apply (Core)
 on:
   workflow_call:
     inputs:
-      matrix:
-        description: "JSON matrix of Terragrunt units to apply"
+      aws_region:
+        description: "AWS region of the state bucket and of the SSM parameters"
         type: string
         required: true
-      neteye_manager_app_id:
-        description: "GitHub App ID for Terragrunt authentication"
+      ssm_prefix:
+        description: "SSM prefix of the parameters, as in root.hcl"
         type: string
         required: true
     secrets:
@@ -16,62 +16,56 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      AWS_REGION:
-        required: true
-      BILLING_EMAIL:
-        required: false
-      NETEYE_MANAGER_APP_PRIVATE_KEY:
-        required: true
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+  MISE_VERSION: 2026.10.25
+  TG_NON_INTERACTIVE: "true"
 
 jobs:
   terragrunt-apply:
-    name: Terragrunt Apply
+    name: Apply
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(inputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Get Terraform Version
-        id: tf_version
-        run: |
-          echo "value=$(cat .terraform-version)" >>"$GITHUB_OUTPUT"
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
-          terraform_version: ${{ steps.tf_version.outputs.value }}
+          persist-credentials: false
 
-      # NOTE: Do not specify permissions for this GitHub App token since we want all permissions granted to this app.
-      - name: Generate GitHub App token for GitHub authentication
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: generate-token-auth
+      - name: Install tools
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
-          app-id: ${{ inputs.neteye_manager_app_id }}
-          private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+          version: ${{ env.MISE_VERSION }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ inputs.aws_region }}
 
-      - name: Terragrunt Apply
-        uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+      # Every value under the SSM prefix is secret. The comment step also
+      # removes the values from the comments.
+      - name: Mask credentials
         env:
-          TF_VAR_github_org: ${{ github.repository_owner }}
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_billing_email: ${{ secrets.BILLING_EMAIL }}
-          GITHUB_APP_ID: ${{ inputs.neteye_manager_app_id }}
-          GITHUB_APP_INSTALLATION_ID: ${{ steps.generate-token-auth.outputs.installation-id }}
-          GITHUB_APP_PEM_FILE: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
-          TG_PARALLELISM: 1 # Sequential execution to avoid rate limits
-        with:
-          github_token: ${{ steps.generate-token-auth.outputs.token }}
-          tg_dir: "${{ matrix.unit }}"
-          tg_command: "apply"
+          SSM_PREFIX: ${{ inputs.ssm_prefix }}
+          SECRETS: ${{ runner.temp }}/secrets
+        run: |
+          set -euo pipefail
+          umask 077
+          aws ssm get-parameters-by-path --path "$SSM_PREFIX" --recursive --with-decryption \
+            --query 'Parameters[].Value' --output json \
+            | jq -r '.[] | split("\n")[] | rtrimstr("\r") | select(length > 0)' \
+            | sort -u >"$SECRETS"
+          if [ ! -s "$SECRETS" ]; then
+            echo "::error::No SSM parameter under $SSM_PREFIX"
+            exit 1
+          fi
+          while IFS= read -r line; do echo "::add-mask::$line"; done <"$SECRETS"
+
+      # Teams first, then the categories in parallel. A failed unit stops the
+      # units that depend on it.
+      - name: Terragrunt Apply
+        run: terragrunt run --all -- apply

@@ -1,18 +1,12 @@
-terraform {
-  required_version = ">= 1.5"
-  backend "s3" {}
-}
-
-# Create GitHub repositories with full configuration
 resource "github_repository" "repos" {
   for_each = local.repos
 
   name                        = each.key
   description                 = each.value.description
-  homepage_url                = try(each.value.homepage_url, null)
-  fork                        = try(each.value.fork, null)
-  source_owner                = try(each.value.source_owner, null)
-  source_repo                 = try(each.value.source_repo, null)
+  homepage_url                = each.value.homepage_url
+  fork                        = each.value.fork
+  source_owner                = each.value.source_owner
+  source_repo                 = each.value.source_repo
   visibility                  = each.value.visibility
   has_issues                  = each.value.has_issues
   has_discussions             = each.value.has_discussions
@@ -23,20 +17,20 @@ resource "github_repository" "repos" {
   allow_squash_merge          = each.value.allow_squash_merge
   allow_rebase_merge          = each.value.allow_rebase_merge
   allow_auto_merge            = each.value.allow_auto_merge
-  allow_forking               = try(each.value.allow_forking, null)
+  allow_forking               = each.value.allow_forking
   merge_commit_title          = each.value.merge_commit_title
   merge_commit_message        = each.value.merge_commit_message
   squash_merge_commit_title   = each.value.squash_merge_commit_title
   squash_merge_commit_message = each.value.squash_merge_commit_message
   delete_branch_on_merge      = each.value.delete_branch_on_merge
   auto_init                   = each.value.auto_init
-  gitignore_template          = try(each.value.gitignore_template, null)
-  license_template            = try(each.value.license_template, null)
+  gitignore_template          = each.value.gitignore_template
+  license_template            = each.value.license_template
   archived                    = each.value.archived
-  archive_on_destroy          = try(each.value.archive_on_destroy, false)
-  topics                      = each.value.topics
+  archive_on_destroy          = coalesce(each.value.archive_on_destroy, false)
+  topics                      = coalesce(each.value.topics, [])
   dynamic "template" {
-    for_each = try([each.value.template], [])
+    for_each = each.value.template != null ? [each.value.template] : []
 
     content {
       owner                = template.value.owner
@@ -46,13 +40,11 @@ resource "github_repository" "repos" {
   }
   allow_update_branch = each.value.allow_update_branch
 
-  # Prevent recreation on taint or destroy to avoid accidental deletion of repositories
   lifecycle {
     prevent_destroy = true
   }
 }
 
-# One team-access entry per (repo, team) pair; keyed as "repo/team-slug"
 resource "github_team_repository" "access" {
   for_each = local.team_access_configs
 
@@ -63,9 +55,7 @@ resource "github_team_repository" "access" {
   depends_on = [github_repository.repos]
 }
 
-# One collaborator entry per (repo, username) pair; keyed as "repo/username".
-# Adding a user creates a pending invitation that the user must accept;
-# destroying the resource revokes the invitation or removes the collaborator.
+# A new collaborator gets an invitation.
 resource "github_repository_collaborator" "access" {
   for_each = local.user_access_configs
 
@@ -76,9 +66,7 @@ resource "github_repository_collaborator" "access" {
   depends_on = [github_repository.repos]
 }
 
-# One github_issue_labels resource per repo. This resource is authoritative:
-# any label not present in labels_by_repo is deleted from the repository,
-# including GitHub's auto-generated defaults (bug, enhancement, ...).
+# Authoritative: deletes every other label, GitHub defaults included.
 resource "github_issue_labels" "labels" {
   for_each = local.labels_by_repo
 
@@ -96,7 +84,6 @@ resource "github_issue_labels" "labels" {
   depends_on = [github_repository.repos]
 }
 
-# One ruleset resource per (repo, ruleset_name) pair; keyed as "repo/ruleset"
 resource "github_repository_ruleset" "rulesets" {
   for_each    = local.ruleset_configs
   name        = each.value.name
@@ -128,7 +115,7 @@ resource "github_repository_ruleset" "rulesets" {
     required_linear_history = each.value.rules.required_linear_history
     required_signatures     = each.value.rules.required_signatures
 
-    # Optional rule blocks: only emitted when the ruleset actually configures them
+    # Optional blocks, only when a tier sets them.
     dynamic "pull_request" {
       for_each = each.value.rules._has_pull_request ? [each.value.rules.pull_request] : []
       content {
@@ -151,7 +138,7 @@ resource "github_repository_ruleset" "rulesets" {
           for_each = required_status_checks.value.required_check
           content {
             context        = required_check.value.context
-            integration_id = try(required_check.value.integration_id, null)
+            integration_id = required_check.value.integration_id
           }
         }
       }
@@ -164,8 +151,8 @@ resource "github_repository_ruleset" "rulesets" {
           for_each = required_code_scanning.value.required_code_scanning_tool
           content {
             tool                      = required_code_scanning_tool.value.tool
-            alerts_threshold          = try(required_code_scanning_tool.value.alerts_threshold, "none")
-            security_alerts_threshold = try(required_code_scanning_tool.value.security_alerts_threshold, "none")
+            alerts_threshold          = coalesce(required_code_scanning_tool.value.alerts_threshold, "none")
+            security_alerts_threshold = coalesce(required_code_scanning_tool.value.security_alerts_threshold, "none")
           }
         }
       }
@@ -174,13 +161,13 @@ resource "github_repository_ruleset" "rulesets" {
     dynamic "merge_queue" {
       for_each = each.value.rules.merge_queue != null ? [each.value.rules.merge_queue] : []
       content {
-        grouping_strategy                 = try(merge_queue.value.grouping_strategy, "ALLGREEN")
-        merge_method                      = try(merge_queue.value.merge_method, "MERGE")
-        check_response_timeout_minutes    = try(merge_queue.value.check_response_timeout_minutes, 60)
-        min_entries_to_merge              = try(merge_queue.value.min_entries_to_merge, 1)
-        max_entries_to_merge              = try(merge_queue.value.max_entries_to_merge, 5)
-        min_entries_to_merge_wait_minutes = try(merge_queue.value.min_entries_to_merge_wait_minutes, 5)
-        max_entries_to_build              = try(merge_queue.value.max_entries_to_build, 5)
+        grouping_strategy                 = coalesce(merge_queue.value.grouping_strategy, "ALLGREEN")
+        merge_method                      = coalesce(merge_queue.value.merge_method, "MERGE")
+        check_response_timeout_minutes    = coalesce(merge_queue.value.check_response_timeout_minutes, 60)
+        min_entries_to_merge              = coalesce(merge_queue.value.min_entries_to_merge, 1)
+        max_entries_to_merge              = coalesce(merge_queue.value.max_entries_to_merge, 5)
+        min_entries_to_merge_wait_minutes = coalesce(merge_queue.value.min_entries_to_merge_wait_minutes, 5)
+        max_entries_to_build              = coalesce(merge_queue.value.max_entries_to_build, 5)
       }
     }
 
@@ -194,7 +181,6 @@ resource "github_repository_ruleset" "rulesets" {
 
   }
 
-  # Prevent ruleset deletion to avoid accidental loss of branch protection settings
   lifecycle {
     prevent_destroy = true
   }

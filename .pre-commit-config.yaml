@@ -84,3 +84,60 @@ repos:
     hooks:
       - id: renovate-config-validator
         args: [--strict]
+
+  # Not in CI, which has no Terraform: the Checks job of plan-core.yaml runs them.
+  - repo: local
+    hooks:
+      - id: terraform-fmt
+        name: format Terraform files
+        language: system
+        entry: mise exec -- terraform fmt -recursive
+        files: \.(tf|tftest\.hcl)$
+        pass_filenames: false
+        groups: [no-ci]
+      - id: terragrunt-hcl-fmt
+        name: format Terragrunt files
+        language: system
+        entry: mise exec -- terragrunt hcl fmt
+        files: (^|/)(root|terragrunt|terragrunt\.stack)\.hcl$
+        pass_filenames: false
+        groups: [no-ci]
+
+  - repo: local
+    hooks:
+      - id: generate-schemas
+        name: generate JSON Schemas from the module variables
+        language: python
+        entry: python scripts/generate-schemas.py
+        files: ^(modules/[^/]+/variables\.tf|scripts/generate-schemas\.py|schemas/.+\.json)$
+        pass_filenames: false
+      - id: unit-tests
+        name: test the schema generator and the workflow scripts
+        language: python
+        entry: python -m unittest discover -s tests
+        files: ^(tests/|scripts/|schemas/|\.github/workflows/|modules/[^/]+/variables\.tf$)
+        pass_filenames: false
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: a76b92851fc9eede9f9bc4073eb55202f34eb0df # frozen: 0.39.0
+    hooks:
+      - id: check-jsonschema
+        name: validate repository files
+        files: ^repositories/[^/]+/[^_/][^/]*\.yaml$
+        args: [--schemafile, schemas/repository.schema.json]
+      - id: check-jsonschema
+        name: validate repository org defaults
+        files: ^repositories/_defaults\.yaml$
+        args: [--schemafile, schemas/repository-org-defaults.schema.json]
+      - id: check-jsonschema
+        name: validate repository category defaults
+        files: ^repositories/[^/]+/_defaults\.yaml$
+        args: [--schemafile, schemas/repository-category-defaults.schema.json]
+      - id: check-jsonschema
+        name: validate team files
+        files: ^teams/teams/[^/]+\.yaml$
+        args: [--schemafile, schemas/team.schema.json]
+      - id: check-jsonschema
+        name: validate organization settings
+        files: ^org-settings/settings\.yaml$
+        args: [--schemafile, schemas/org-settings.schema.json]

@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../schemas/repository-category-defaults.schema.json
+extra_team_access:
+  - team: rd-userguide-squad
+    permission: push
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "TektonCI / neteye-userguide-pr-testing"
+            integration_id: 1112696 # Pipeline As Code
+    extra_bypass_actors:
+      - actor_id: 0
+        actor_type: DeployKey
+        bypass_mode: always
