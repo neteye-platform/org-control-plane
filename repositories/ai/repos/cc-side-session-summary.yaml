@@ -1,0 +1,38 @@
+name: cc-side-session-summary
+description: Claude Code mod that shows a live side pane with worktree status, session goal, progress checklist and usage stats
+topics:
+  - ai
+  - claude
+  - claude-code
+  - claude-code-hooks
+  - claude-code-mods
+  - claude-code-plugin
+  - claude-mods
+  - developer-tools
+  - function-hooks
+  - session-summary
+  - progress-tracking
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "Tests"
+            integration_id: 15368 # GH Actions
+
+  # Allow only NetEye Steward to tag since the version is bumped
+  # inside the .claude-plugin/plugin.json file and the tag is created by a workflow
+  main-tag-protection:
+    bypass_actors:
+      - actor_id: 3017534 # neteye-steward
+        actor_type: Integration
+        bypass_mode: always
+    rules:
+      creation: true
