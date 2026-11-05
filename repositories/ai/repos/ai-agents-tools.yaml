@@ -1,0 +1,19 @@
+name: ai-agents-tools
+description: Reusable skills, plugins and mods that give AI agents better context, workflows and guardrails
+topics:
+  - agent-skills
+  - ai
+  - ai-agents
+  - claude
+  - claude-code
+  - claude-code-mods
+  - claude-code-plugin
+  - claude-code-skills
+  - developer-tools
+  - llm
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
