@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/repository-org-defaults.schema.json
 visibility: public
 has_issues: true
 has_discussions: false

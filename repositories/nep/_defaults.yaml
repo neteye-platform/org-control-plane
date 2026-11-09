@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../../schemas/repository-category-defaults.schema.json
+extra_team_access:
+  - team: rd-neteye-cloud-platform-engineering-squad
+    permission: admin
+  - team: neteye-nep-admins
+    permission: admin
+  - team: neteye-cloud-delivery-team
+    permission: push
+  - team: service-support
+    permission: push

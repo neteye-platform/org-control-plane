@@ -1,9 +1,9 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: rd-security-auditors
 description: R&D Security Auditors
 privacy: closed
 notification_setting: notifications_enabled
 # ldap_dn needs to be set manually
 
-# Organization role names (as listed by the GitHub org), optional
 org_roles:
   - security_manager

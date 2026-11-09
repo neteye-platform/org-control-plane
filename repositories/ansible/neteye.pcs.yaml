@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: neteye.pcs
+description: Ansible NetEye PCS collection
+topics:
+  - neteye
+  - ansible
+  - ansible-collection
+  - automation
+  - pacemaker
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "Tests"
+            integration_id: 15368 # GH Actions

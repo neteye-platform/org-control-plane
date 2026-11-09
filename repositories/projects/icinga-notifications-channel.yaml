@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: icinga-notifications-channel
+description: Rust framework to write Icinga Notifications channel plugins
+topics:
+  - icinga
+  - icinga-notifications
+  - json-rpc
+  - notifications
+  - plugin-framework
+  - rust
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false
