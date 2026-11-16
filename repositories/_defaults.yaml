@@ -129,6 +129,9 @@ labels:
   - name: stale
     color: A3053A
     description: "Issue or pull request inactive for a long time"
+  - name: ci
+    color: DB1693
+    description: "Continuous Integration issues or improvements"
   - name: "autorelease: pending"
     color: FBCA04
     description: "Automated release in progress"
