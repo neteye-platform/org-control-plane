@@ -3,195 +3,379 @@ name: Terragrunt Plan (Core)
 on:
   workflow_call:
     inputs:
-      matrix:
-        description: "JSON matrix of Terragrunt units to plan"
-        type: string
-        required: true
-      neteye_manager_app_id:
-        description: "GitHub App ID for Terragrunt authentication"
-        type: string
-        required: true
       neteye_app_id:
-        description: "GitHub App ID for PR comments (optional — falls back to the auth token if omitted)"
+        description: "ID of the GitHub App that writes the pull request comments"
         type: string
-        required: false
-        default: ""
+        required: true
+      aws_region:
+        description: "AWS region of the state bucket and of the SSM parameters"
+        type: string
+        required: true
+      ssm_prefix:
+        description: "SSM prefix of the parameters, as in root.hcl"
+        type: string
+        required: true
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      AWS_REGION:
-        required: true
-      BILLING_EMAIL:
-        required: false
-      NETEYE_MANAGER_APP_PRIVATE_KEY:
-        required: true
       NETEYE_APP_PRIVATE_KEY:
-        required: false
+        description: "Private key of the GitHub App that writes the pull request comments"
+        required: true
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+  MISE_VERSION: 2026.10.25
+  TG_NON_INTERACTIVE: "true"
 
 jobs:
-  cleanup-plan-comments:
-    name: Cleanup old plan comments
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-    steps:
-      - name: Generate GitHub App token for commenting on PRs
-        if: inputs.neteye_app_id != ''
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: generate-token-comment
-        with:
-          app-id: ${{ inputs.neteye_app_id }}
-          private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
-          permission-pull-requests: write
-
-      - name: Generate GitHub App token (fallback)
-        if: inputs.neteye_app_id == ''
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: generate-token-comment-fallback
-        with:
-          app-id: ${{ inputs.neteye_manager_app_id }}
-          private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
-          permission-pull-requests: write
-
-      - name: Delete previous plan comments
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          APP_ID: ${{ inputs.neteye_app_id || inputs.neteye_manager_app_id }}
-        with:
-          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-comment-fallback.outputs.token }}
-          script: |
-            const appId = Number(process.env.APP_ID);
-
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-              }
-            );
-
-            const stale = comments.filter((c) => {
-              if (c.performed_via_github_app?.id !== appId) return false;
-              const body = c.body.trimStart();
-              return body.startsWith('Execution result of "plan"') || body.startsWith('No changes in `');
-            });
-
-            core.info(`Found ${stale.length} previous plan comment(s)`);
-
-            for (const c of stale) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: c.id,
-              });
-              core.info(`Deleted comment ${c.id}`);
-            }
-
-  terragrunt-plan:
-    name: Terragrunt Plan
-    needs: cleanup-plan-comments
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(inputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Get Terraform Version
-        id: tf_version
+      - name: Install tools
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: ${{ env.MISE_VERSION }}
+
+      # Terraform cannot see a duplicate across states. GitHub ignores the case.
+      - name: Check for duplicate repository names
         run: |
-          echo "value=$(cat .terraform-version)" >>"$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: ${{ steps.tf_version.outputs.value }}
+          duplicates=$(
+            find repositories -mindepth 2 -maxdepth 2 -name '*.yaml' -not -name '_*' -not -path '*/.*' -printf '%f\n' \
+            | sort -f \
+            | uniq -di
+          )
 
-      - name: Check HCL formatting
-        uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
-        with:
-          tg_command: "hcl fmt --check --diff"
+          if [ -n "$duplicates" ]; then
+            echo "::error::Duplicate repository files: $duplicates"
+            exit 1
+          fi
 
-      # NOTE: Do not specify permissions for this GitHub App token since we want all permissions granted to this app.
-      - name: Generate GitHub App token for GitHub authentication
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: generate-token-auth
-        with:
-          app-id: ${{ inputs.neteye_manager_app_id }}
-          private-key: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
+      # Terragrunt ignores any other file.
+      - name: Check file extensions
+        run: |
+          set -euo pipefail
 
-      - name: Generate GitHub App token for commenting on PRs
-        if: inputs.neteye_app_id != ''
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: generate-token-comment
+          others=$(
+            find repositories teams/teams -mindepth 1 -type f -not -name '*.yaml' -not -path '*/.*' \
+              -not -path 'repositories/terragrunt.stack.hcl'
+          )
+
+          if [ -n "$others" ]; then
+            echo "::error::Files that are not .yaml: $(tr '\n' ' ' <<<"$others")"
+            exit 1
+          fi
+
+      - name: Check that every category has a defaults file
+        run: |
+          set -euo pipefail
+
+          missing=$(
+            find repositories -mindepth 1 -maxdepth 1 -type d -not -name '.*' \
+              -exec sh -c '[ -f "$1/_defaults.yaml" ] || echo "$1"' _ {} \;
+          )
+
+          if [ -n "$missing" ]; then
+            echo "::error::Directories without _defaults.yaml: $(tr '\n' ' ' <<<"$missing")"
+            exit 1
+          fi
+
+      - name: Check formatting
+        run: |
+          terragrunt hcl fmt --check --diff
+          terraform fmt -check -diff -recursive
+
+      - name: Test modules
+        run: |
+          set -euo pipefail
+          for tests in modules/*/tests; do
+            module=$(dirname "$tests")
+            echo "::group::$module"
+            cp .terraform.lock.hcl "$module/"
+            terraform -chdir="$module" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$module" test
+            echo "::endgroup::"
+          done
+
+  terragrunt-plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    # The comments use a GitHub App token, not GITHUB_TOKEN.
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          app-id: ${{ inputs.neteye_app_id }}
-          private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
-          permission-pull-requests: write
+          persist-credentials: false
+
+      - name: Install tools
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: ${{ env.MISE_VERSION }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ inputs.aws_region }}
 
-      - name: Terragrunt Plan
-        id: plan
-        uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+      # Every value under the SSM prefix is secret. The comment step also
+      # removes the values from the comments.
+      - name: Mask credentials
         env:
-          TF_VAR_github_org: ${{ github.repository_owner }}
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_billing_email: ${{ secrets.BILLING_EMAIL }}
-          GITHUB_APP_ID: ${{ inputs.neteye_manager_app_id }}
-          GITHUB_APP_INSTALLATION_ID: ${{ steps.generate-token-auth.outputs.installation-id }}
-          GITHUB_APP_PEM_FILE: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}
-          TG_PARALLELISM: 1 # Sequential execution to avoid rate limits
-        with:
-          github_token: ${{ steps.generate-token-auth.outputs.token }}
-          tg_dir: "${{ matrix.unit }}"
-          tg_command: "plan"
-          tg_comment: 0
-          tg_output_capture: 1
+          SSM_PREFIX: ${{ inputs.ssm_prefix }}
+          SECRETS: ${{ runner.temp }}/secrets
+        run: |
+          set -euo pipefail
+          umask 077
+          aws ssm get-parameters-by-path --path "$SSM_PREFIX" --recursive --with-decryption \
+            --query 'Parameters[].Value' --output json \
+            | jq -r '.[] | split("\n")[] | rtrimstr("\r") | select(length > 0)' \
+            | sort -u >"$SECRETS"
+          if [ ! -s "$SECRETS" ]; then
+            echo "::error::No SSM parameter under $SSM_PREFIX"
+            exit 1
+          fi
+          while IFS= read -r line; do echo "::add-mask::$line"; done <"$SECRETS"
 
-      - name: Post plan comment
+      # No lock: a plan never writes the state, and a cancelled run leaves no
+      # stale lock.
+      - name: Terragrunt Plan
+        env:
+          PLANS: ${{ runner.temp }}/plans
+        run: terragrunt run --all --queue-ignore-errors --out-dir "$PLANS" --json-out-dir "$PLANS" -- plan -lock=false
+
+      # A unit name is its directory without .terragrunt-stack/, as in the
+      # state key.
+      - name: Show plans
+        id: show
+        if: ${{ !cancelled() }}
+        env:
+          PLANS: ${{ runner.temp }}/plans
+        run: |
+          set -euo pipefail
+          # `find` lists the units of a stack only once it is generated.
+          terragrunt stack generate
+          units=$(
+            terragrunt find --json \
+              | jq -c 'map(select(.type == "unit") | {unit: (.path | sub("/\\.terragrunt-stack/"; "/")), dir: .path})'
+          )
+          echo "units=$units" >>"$GITHUB_OUTPUT"
+          jq -r '.[].dir' <<<"$units" | while IFS= read -r dir; do
+            if [ -f "$PLANS/$dir/tfplan.json" ] &&
+              ! terragrunt show --working-dir "$dir" --tf-forward-stdout -no-color "$PLANS/$dir/tfplan.tfplan" \
+                >"$PLANS/$dir/tfplan.txt" </dev/null; then
+              echo "::error::Cannot show the plan of $dir"
+              rm -f "$PLANS/$dir/tfplan.txt"
+            fi
+          done
+
+      # Also after a failure, so that no comment shows an outdated plan.
+      - name: Generate GitHub App token for the comments
+        id: app-token
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ inputs.neteye_app_id }}
+          private-key: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
+
+      - name: Update pull request comments
+        if: ${{ !cancelled() && steps.app-token.outcome == 'success' }}
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          PLAN_OUTPUT: ${{ steps.plan.outputs.tg_action_output }}
-          TG_DIR: ${{ matrix.unit }}
+          UNITS: ${{ steps.show.outputs.units }}
+          PLANS: ${{ runner.temp }}/plans
+          SECRETS: ${{ runner.temp }}/secrets
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         with:
-          github-token: ${{ steps.generate-token-comment.outputs.token || steps.generate-token-auth.outputs.token }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
-            const raw = process.env.PLAN_OUTPUT;
-            const tgDir = process.env.TG_DIR;
-            if (!raw) {
-              throw new Error('tg_action_output is empty — cannot determine plan result');
+            const fs = require('fs');
+
+            // GitHub rejects comments longer than 65536 characters.
+            const MAX_LENGTH = 60000;
+            const MAX_ROWS = 200;
+            const ACTIONS = {
+              create: '➕ create',
+              update: '✏️ update',
+              delete: '🗑️ destroy',
+              replace: '🔁 replace',
+              import: '📥 import',
+              forget: '📤 remove from state',
+              move: '🚚 move',
+            };
+            const DIFF_MARKERS = { '+': '+', '-': '-' };
+            // Destructive actions first.
+            const ORDER = ['delete', 'replace', 'forget', 'create', 'update', 'import', 'move'];
+
+            // One action per resource that changes, outputs are ignored.
+            function changedResources(plan) {
+              const resources = (plan.resource_changes || []).flatMap(({ address, previous_address, change }) => {
+                const actions = change.actions.join(',');
+                let action;
+                if (['create', 'update', 'delete', 'forget'].includes(actions)) {
+                  action = actions;
+                } else if (actions === 'delete,create' || actions === 'create,delete') {
+                  action = 'replace';
+                } else if (change.importing) {
+                  action = 'import';
+                } else if (previous_address) {
+                  action = 'move';
+                } else {
+                  return [];
+                }
+                return [{ address, action }];
+              });
+              return resources.sort(
+                (a, b) => ORDER.indexOf(a.action) - ORDER.indexOf(b.action) || a.address.localeCompare(b.address),
+              );
             }
-            const output = raw.replace(/%25/g, '%').replace(/%0D/g, '\r').replace(/%0A/g, '\n');
-            const hasChanges = !output.includes('No changes. Your infrastructure matches the configuration.');
-            const body = hasChanges
-              ? [
-                  `Execution result of "plan" in \`${tgDir}\``,
-                  '',
-                  '<details>',
-                  '<summary>Show output</summary>',
-                  '',
-                  '```terraform',
-                  output,
-                  '```',
-                  '',
-                  '</details>',
-                ].join('\n')
-              : `No changes in \`${tgDir}\`. Infrastructure matches the configuration.`;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+
+            // Resource blocks only, with the markers in the first column for
+            // the diff highlighting.
+            function diff(text) {
+              const actions = text.indexOf('will perform the following actions:');
+              const start = text.indexOf('\n  # ', actions === -1 ? 0 : actions);
+              const end = text.indexOf('\nPlan: ', start === -1 ? 0 : start);
+              return text
+                .slice(start === -1 ? 0 : start + 1, end === -1 ? undefined : end)
+                .split('\n')
+                .reduce((lines, line) => {
+                  if (!/^\s*# \(\d+ unchanged .* hidden\)$/.test(line)) {
+                    lines.push(line);
+                  } else if (lines.length && lines[lines.length - 1].trim() === '') {
+                    lines.pop();
+                  }
+                  return lines;
+                }, [])
+                .map((line) =>
+                  line.replace(/^(\s*)(-\/\+|\+\/-|[+~-]) /, (_, indent, marker) => `${DIFF_MARKERS[marker] || '!'}${indent} `),
+                )
+                .join('\n')
+                .replace(/^\n+/, '')
+                .trimEnd();
+            }
+
+            function render(unit, resources, details) {
+              const count = (...names) => resources.filter((r) => names.includes(r.action)).length;
+              const summary = [
+                `${count('create', 'replace')} to add`,
+                `${count('update')} to change`,
+                `${count('delete', 'replace')} to destroy`,
+              ];
+              if (count('import')) summary.push(`${count('import')} to import`);
+              if (count('forget')) summary.push(`${count('forget')} to remove from state`);
+              if (count('move')) summary.push(`${count('move')} to move`);
+
+              const head = [
+                `### Terragrunt plan: \`${unit}\``,
+                '',
+                summary.join(', '),
+                '',
+                '| Action | Resource |',
+                '| --- | --- |',
+                ...resources.slice(0, MAX_ROWS).map((r) => `| ${ACTIONS[r.action]} | \`${r.address.replaceAll('|', '\\|')}\` |`),
+                ...(resources.length > MAX_ROWS ? [`| | _and ${resources.length - MAX_ROWS} more_ |`] : []),
+                '',
+              ].join('\n');
+
+              // A fence longer than any run of backticks in the diff.
+              const fence = '`'.repeat(Math.max(3, ...(details.match(/`+/g) || []).map((run) => run.length + 1)));
+              let body = details;
+              let note = '';
+              const room = Math.max(0, MAX_LENGTH - head.length - 2 * fence.length - 200);
+              if (body.length > room) {
+                body = body.slice(0, Math.max(0, body.lastIndexOf('\n', room)));
+                note = `\n_The diff is truncated, see the [full plan](${runUrl})._\n`;
+              }
+              return `${head}\n<details><summary>Changes</summary>\n\n${fence}diff\n${body}\n${fence}\n${note}\n</details>\n`;
+            }
+
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
               issue_number: context.issue.number,
-              body,
             });
+            const mine = comments.filter((c) => c.user?.login === `${process.env.APP_SLUG}[bot]`);
+            const ours = mine.flatMap((c) => {
+              const match = c.body?.match(/^<!-- terragrunt-plan: (.+?) -->/);
+              return match ? [{ id: c.id, unit: match[1] }] : [];
+            });
+            const failure = (unit) =>
+              `<!-- terragrunt-plan: ${unit} -->\n### Terragrunt plan: \`${unit}\`\n\n❌ The plan failed, see the [run](${runUrl}).\n`;
+            const upsert = (existing, body) =>
+              existing
+                ? github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body })
+                : github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+
+            // One comment for the whole pull request when no unit has its own.
+            const SUMMARY = '<!-- terragrunt-plan-summary -->';
+            const summary = mine.find((c) => c.body?.startsWith(SUMMARY));
+            const updateSummary = async (text) => {
+              if (text) {
+                await upsert(summary, `${SUMMARY}\n### Terragrunt plan\n\n${text}\n`);
+              } else if (summary) {
+                await github.rest.issues.deleteComment({ ...context.repo, comment_id: summary.id });
+              }
+            };
+
+            // Without the list of units, no comment can be trusted any more.
+            if (!process.env.UNITS) {
+              for (const { id, unit } of ours) {
+                await github.rest.issues.updateComment({ ...context.repo, comment_id: id, body: failure(unit) });
+              }
+              await updateSummary(ours.length ? null : `❌ The plan failed, see the [run](${runUrl}).`);
+              return;
+            }
+            const units = JSON.parse(process.env.UNITS);
+
+            // Without the SSM values, no plan is published.
+            const values = fs.existsSync(process.env.SECRETS)
+              ? fs.readFileSync(process.env.SECRETS, 'utf8').split('\n').filter(Boolean)
+              : [];
+            const secrets = values.length ? values.sort((a, b) => b.length - a.length) : null;
+            const redact = (text) => secrets.reduce((result, secret) => result.split(secret).join('***'), text);
+
+            // A unit without tfplan.json or tfplan.txt failed.
+            let commented = 0;
+            for (const { unit, dir } of units) {
+              const plan = `${process.env.PLANS}/${dir}/tfplan`;
+              const failed = !secrets || !fs.existsSync(`${plan}.json`) || !fs.existsSync(`${plan}.txt`);
+              const resources = failed ? [] : changedResources(JSON.parse(fs.readFileSync(`${plan}.json`, 'utf8')));
+              const existing = ours.find((c) => c.unit === unit);
+
+              if (!failed && resources.length === 0) {
+                core.info(`No changes in ${unit}`);
+                if (existing) {
+                  await github.rest.issues.deleteComment({ ...context.repo, comment_id: existing.id });
+                }
+                continue;
+              }
+
+              const body = failed
+                ? failure(unit)
+                : `<!-- terragrunt-plan: ${unit} -->\n${redact(render(unit, resources, diff(fs.readFileSync(`${plan}.txt`, 'utf8'))))}`;
+              await upsert(existing, body);
+              commented++;
+            }
+
+            // Units that do not exist any more, for example a deleted category.
+            for (const { id } of ours.filter((c) => !units.some((u) => u.unit === c.unit))) {
+              await github.rest.issues.deleteComment({ ...context.repo, comment_id: id });
+            }
+
+            await updateSummary(commented ? null : `✅ No changes in ${units.length} unit${units.length === 1 ? '' : 's'}.`);

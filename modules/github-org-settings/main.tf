@@ -1,14 +1,9 @@
-terraform {
-  required_version = ">= 1.5"
-  backend "s3" {}
-}
-
 resource "github_organization_settings" "org" {
-  billing_email                                                = sensitive(var.settings.billing_email)
+  billing_email                                                = var.billing_email
   company                                                      = var.settings.company
   blog                                                         = var.settings.blog
   email                                                        = var.settings.email
-  twitter_username                                             = try(var.settings.twitter_username, null)
+  twitter_username                                             = var.settings.twitter_username
   location                                                     = var.settings.location
   name                                                         = var.settings.name
   description                                                  = var.settings.description
@@ -31,7 +26,6 @@ resource "github_organization_settings" "org" {
   secret_scanning_enabled_for_new_repositories                 = var.settings.secret_scanning_enabled_for_new_repositories
   secret_scanning_push_protection_enabled_for_new_repositories = var.settings.secret_scanning_push_protection_enabled_for_new_repositories
 
-  # Prevent destruction of org settings to avoid accidental deletion of critical configuration
   lifecycle {
     prevent_destroy = true
   }

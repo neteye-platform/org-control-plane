@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: rd-userguide-squad
 description: R&D Userguide Squad
 privacy: closed

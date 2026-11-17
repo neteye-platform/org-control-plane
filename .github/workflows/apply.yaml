@@ -5,23 +5,20 @@ on:
     branches:
       - "main"
 
-jobs:
-  generate-matrix:
-    permissions:
-      contents: read
-    uses: ./.github/workflows/generate-matrix.yaml
+# One apply at a time. A pending run can be replaced: the newer one applies the latest main.
+concurrency:
+  group: terragrunt-apply
+  cancel-in-progress: false
 
+jobs:
   terragrunt-apply:
-    needs: generate-matrix
     permissions:
       contents: read
     uses: ./.github/workflows/apply-core.yaml
     with:
-      matrix: ${{ needs.generate-matrix.outputs.matrix }}
-      neteye_manager_app_id: ${{ vars.NETEYE_MANAGER_APP_ID }}
+      # Same as in root.hcl.
+      aws_region: eu-south-1
+      ssm_prefix: /org-control-plane
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      BILLING_EMAIL: ${{ secrets.BILLING_EMAIL }}
-      NETEYE_MANAGER_APP_PRIVATE_KEY: ${{ secrets.NETEYE_MANAGER_APP_PRIVATE_KEY }}

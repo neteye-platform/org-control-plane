@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: default-repository-template
+description: Default repository template
+topics:
+  - github
+  - repository-template
+  - template
+is_template: true
+archived: false
