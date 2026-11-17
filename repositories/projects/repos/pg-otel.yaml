@@ -9,7 +9,23 @@ topics:
   - tracing
 is_template: false
 archived: false
+
 template:
   owner: neteye-platform
   repository: default-repository-template
   include_all_branches: false
+
+branch_rulesets:
+  main-branch-protection:
+    rules:
+      required_status_checks:
+        required_check:
+          - context: "OCI Image Tests"
+            integration_id: 15368 # GH Actions
+          - context: "lint (rustfmt, clippy)"
+            integration_id: 15368 # GH Actions
+          - context: "unit-tests (PostgreSQL 18)"
+            integration_id: 15368 # GH Actions
+          - context: "unit-tests (PostgreSQL 19)"
+            integration_id: 15368 # GH Actions
+    
