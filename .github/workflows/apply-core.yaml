@@ -48,7 +48,7 @@ jobs:
 
       # NOTE: Do not specify permissions for this GitHub App token since we want all permissions granted to this app.
       - name: Generate GitHub App token for GitHub authentication
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         id: generate-token-auth
         with:
           app-id: ${{ inputs.neteye_manager_app_id }}
