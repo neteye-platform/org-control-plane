@@ -192,7 +192,7 @@ Terraform and Terragrunt are pinned in `mise.toml` with checksums in
 `.terraform.lock.hcl` at the root pins its checksums for every unit. Renovate
 updates all of them.
 
-## Reusing the modules, the schemas and the workflows
+## Reusing this repository
 
 The modules in `modules/` do not depend on this repository. Another repository
 can use them as a Terragrunt or Terraform source pinned to a commit, for
@@ -201,12 +201,17 @@ example
 The module variables document the inputs, and the tests in `modules/*/tests`
 show examples.
 
-The same holds for the JSON Schemas in `schemas/` and for the reusable
-workflows `plan-core.yaml` and `apply-core.yaml`. The workflows run on the
-repository that calls them. `plan-core.yaml` tests every module that has
-tests and plans every unit that Terragrunt finds. `apply-core.yaml` applies
-every unit. The caller needs a `.terraform.lock.hcl` at its root, as
-`root.hcl` does here: the module tests use it too.
+The same holds for the catalog unit `catalog/units/repository-category`, for
+the JSON Schemas in `schemas/` and for the reusable workflows `plan-core.yaml`
+and `apply-core.yaml`. The workflows run on the repository that calls them.
+`plan-core.yaml` tests every module that has tests and plans every unit that
+Terragrunt finds. `apply-core.yaml` applies every unit. The caller needs a
+`.terraform.lock.hcl` at its root, as `root.hcl` does here: the module tests
+use it too.
+
+A stack that uses the catalog unit passes its values: `category`, `module`
+(the source of `github-repositories`) and, optionally, `dependencies`. See
+`repositories/terragrunt.stack.hcl`.
 
 ## Security
 
