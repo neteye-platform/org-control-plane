@@ -18,5 +18,8 @@ unit "category" {
 
   values = {
     category = each.key
+    module   = "${get_repo_root()}//modules/github-repositories"
+    # Repositories grant access to teams.
+    dependencies = ["${get_repo_root()}/teams"]
   }
 }
