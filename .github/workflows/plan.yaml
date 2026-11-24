@@ -24,21 +24,3 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       NETEYE_APP_PRIVATE_KEY: ${{ secrets.NETEYE_APP_PRIVATE_KEY }}
-
-  # Not required any more. Remove it after the merge.
-  terragrunt-plan-status:
-    name: Terragrunt Plan Status
-    needs: terragrunt-plan
-    if: always()
-    permissions:
-      contents: none
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check plan job results
-        env:
-          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
-        run: |
-          if [ "$FAILED" = "true" ]; then
-            echo "::error::A plan job failed or was cancelled"
-            exit 1
-          fi
