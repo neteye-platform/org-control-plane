@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../schemas/repository.schema.json
+name: neteye-userguide-content
+description: NetEye Userguide | Content
+topics:
+  - neteye
+  - docs
+  - documentation
+  - userguide
+is_template: false
+archived: false
+template:
+  owner: neteye-platform
+  repository: default-repository-template
+  include_all_branches: false

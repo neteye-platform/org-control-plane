@@ -1,22 +1,14 @@
 **/.terraform/
 **/.terragrunt-cache/
+**/.terragrunt-stack/
 
-# Terraform state and plans
+# Created by the module tests: the only lock file is the root one
+modules/*/.terraform.lock.hcl
+
 *.tfstate
 *.tfstate.*
 *.tfplan
-
-# Generated files
-**/provider.tf
 crash.log
 crash.*.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
 
-# Sensitive variable files
-**/terraform.tfvars
-**/terraform.tfvars.json
-*.auto.tfvars
-*.auto.tfvars.json
+__pycache__/
