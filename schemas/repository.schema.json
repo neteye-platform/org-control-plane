@@ -117,8 +117,7 @@
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "minItems": 1
+      }
     },
     "template": {
       "description": "Create the repository from a template repository.",
@@ -600,7 +599,6 @@
   "additionalProperties": false,
   "required": [
     "name",
-    "description",
-    "topics"
+    "description"
   ]
 }

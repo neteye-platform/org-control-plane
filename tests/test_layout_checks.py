@@ -82,19 +82,6 @@ class LayoutChecksTest(StepTest):
         ):
             self.add(path)
 
-    def test_every_category_has_a_defaults_file(self):
-        step = "Check that every category has a defaults file"
-        self.assertEqual(self.run_step(step).returncode, 0)
-
-        self.add("repositories/no-defaults-1/repo.yaml")
-        (self.root / "repositories/no-defaults-2").mkdir()
-        result = self.run_step(step)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("::error::Directories without _defaults.yaml:", result.stdout)
-        self.assertIn("repositories/no-defaults-1", result.stdout)
-        self.assertIn("repositories/no-defaults-2", result.stdout)
-        self.assertEqual(len(result.stdout.strip().splitlines()), 1)
-
     def test_duplicate_repository_names(self):
         step = "Check for duplicate repository names"
         self.assertEqual(self.run_step(step).returncode, 0)
@@ -116,20 +103,50 @@ class LayoutChecksTest(StepTest):
         self.assertEqual(result.returncode, 1)
         self.assertIn("::error::Duplicate repository files:", result.stdout)
 
-    def test_file_extensions(self):
-        step = "Check file extensions"
-        self.add("repositories/terragrunt.stack.hcl")
-        self.add("teams/teams/admins.yaml")
-        self.add("repositories/ai/.terragrunt-cache/x/main.tf")
-        self.assertEqual(self.run_step(step).returncode, 0)
 
-        self.add("repositories/ai/new.yml")
-        self.add("teams/teams/devs.yml")
-        result = self.run_step(step)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("::error::Files that are not .yaml:", result.stdout)
-        self.assertIn("repositories/ai/new.yml", result.stdout)
-        self.assertIn("teams/teams/devs.yml", result.stdout)
+class TestModulesTest(StepTest):
+    def fake_terraform(self) -> dict:
+        """`terraform` writes its arguments to TERRAFORM_ARGS."""
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir(exist_ok=True)
+        (bin_dir / "terraform").write_text(
+            '#!/bin/sh\necho "$*" >>"$TERRAFORM_ARGS"\n', encoding="utf-8"
+        )
+        (bin_dir / "terraform").chmod(0o755)
+        self.add(".terraform.lock.hcl")
+        return {"TERRAFORM_ARGS": str(self.root / "terraform-args")}
+
+    def test_every_module_with_tests_is_tested(self):
+        for path in (
+            "modules/a/main.tf",
+            "modules/a/tests/one.tftest.hcl",
+            "modules/a/tests/two.tftest.hcl",
+            "other/b/tests/one.tftest.hcl",
+            "modules/no-tests/main.tf",
+            "modules/c/one.tftest.hcl",
+            "repositories/.terragrunt-stack/ai/tests/one.tftest.hcl",
+        ):
+            self.add(path)
+        env = self.fake_terraform()
+        result = self.run_step("Test modules", **env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            Path(env["TERRAFORM_ARGS"]).read_text(encoding="utf-8").splitlines(),
+            [
+                "-chdir=modules/a init -backend=false -input=false -lockfile=readonly",
+                "-chdir=modules/a test",
+                "-chdir=other/b init -backend=false -input=false -lockfile=readonly",
+                "-chdir=other/b test",
+            ],
+        )
+        self.assertTrue((self.root / "modules/a/.terraform.lock.hcl").exists())
+
+    def test_without_modules_nothing_is_tested(self):
+        env = self.fake_terraform()
+        result = self.run_step("Test modules", **env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No module has tests", result.stdout)
+        self.assertFalse(Path(env["TERRAFORM_ARGS"]).exists())
 
 
 class MaskCredentialsTest(StepTest):

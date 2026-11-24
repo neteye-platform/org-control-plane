@@ -241,10 +241,8 @@ def build() -> dict[str, dict]:
         "required_check_override"
     ]
 
-    # Policy of this organization, not of the module: every repository file
-    # names the repository, describes it and sets at least one topic.
-    repository["required"] = ["name", "description", "topics"]
-    repository["properties"]["topics"]["minItems"] = 1
+    # Every repository file names and describes the repository.
+    repository["required"] = ["name", "description"]
 
     return {
         "repository.schema.json": document(

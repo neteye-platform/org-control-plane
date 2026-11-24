@@ -65,7 +65,7 @@ One file per team in `teams/teams/`. The file name must match `name`.
 
 One file per repository in `repositories/<category>/`. The file name must match
 `name`, and a repository name must be unique across all categories. The schema
-of this repository also requires `description` and at least one topic.
+also requires `description`.
 
 Settings merge in three tiers. The most specific tier wins:
 
@@ -192,7 +192,7 @@ Terraform and Terragrunt are pinned in `mise.toml` with checksums in
 `.terraform.lock.hcl` at the root pins its checksums for every unit. Renovate
 updates all of them.
 
-## Reusing the modules
+## Reusing the modules, the schemas and the workflows
 
 The modules in `modules/` do not depend on this repository. Another repository
 can use them as a Terragrunt or Terraform source pinned to a commit, for
@@ -200,6 +200,13 @@ example
 `git::https://github.com/neteye-platform/org-control-plane.git//modules/github-repositories?ref=<commit>`.
 The module variables document the inputs, and the tests in `modules/*/tests`
 show examples.
+
+The same holds for the JSON Schemas in `schemas/` and for the reusable
+workflows `plan-core.yaml` and `apply-core.yaml`. The workflows run on the
+repository that calls them. `plan-core.yaml` tests every module that has
+tests and plans every unit that Terragrunt finds. `apply-core.yaml` applies
+every unit. The caller needs a `.terraform.lock.hcl` at its root, as
+`root.hcl` does here: the module tests use it too.
 
 ## Security
 

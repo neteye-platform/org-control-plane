@@ -143,8 +143,8 @@ class SchemasTest(unittest.TestCase):
 
     def test_repository_policy(self):
         repository = self.schemas["repository.schema.json"]
-        self.assertEqual(repository["required"], ["name", "description", "topics"])
-        self.assertEqual(repository["properties"]["topics"]["minItems"], 1)
+        self.assertEqual(repository["required"], ["name", "description"])
+        self.assertNotIn("minItems", repository["properties"]["topics"])
         self.assertFalse(repository["additionalProperties"])
 
     def test_defaults_have_no_name_and_no_required_field(self):

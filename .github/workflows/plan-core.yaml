@@ -62,51 +62,31 @@ jobs:
             exit 1
           fi
 
-      # Terragrunt ignores any other file.
-      - name: Check file extensions
-        run: |
-          set -euo pipefail
-
-          others=$(
-            find repositories teams/teams -mindepth 1 -type f -not -name '*.yaml' -not -path '*/.*' \
-              -not -path 'repositories/terragrunt.stack.hcl'
-          )
-
-          if [ -n "$others" ]; then
-            echo "::error::Files that are not .yaml: $(tr '\n' ' ' <<<"$others")"
-            exit 1
-          fi
-
-      - name: Check that every category has a defaults file
-        run: |
-          set -euo pipefail
-
-          missing=$(
-            find repositories -mindepth 1 -maxdepth 1 -type d -not -name '.*' \
-              -exec sh -c '[ -f "$1/_defaults.yaml" ] || echo "$1"' _ {} \;
-          )
-
-          if [ -n "$missing" ]; then
-            echo "::error::Directories without _defaults.yaml: $(tr '\n' ' ' <<<"$missing")"
-            exit 1
-          fi
-
       - name: Check formatting
         run: |
           terragrunt hcl fmt --check --diff
           terraform fmt -check -diff -recursive
 
+      # A module is a directory with *.tftest.hcl files in tests/.
       - name: Test modules
         run: |
           set -euo pipefail
-          for tests in modules/*/tests; do
-            module=$(dirname "$tests")
+          modules=$(
+            find . -path '*/.*' -prune -o -name '*.tftest.hcl' -printf '%h\n' \
+              | sed -n 's#^\./\(.*\)/tests$#\1#p' \
+              | sort -u
+          )
+          if [ -z "$modules" ]; then
+            echo "No module has tests"
+            exit 0
+          fi
+          while IFS= read -r module; do
             echo "::group::$module"
             cp .terraform.lock.hcl "$module/"
             terraform -chdir="$module" init -backend=false -input=false -lockfile=readonly
             terraform -chdir="$module" test
             echo "::endgroup::"
-          done
+          done <<<"$modules"
 
   terragrunt-plan:
     name: Plan
