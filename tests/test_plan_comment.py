@@ -46,18 +46,23 @@ class PlanCommentTest(unittest.TestCase):
         shutil.rmtree(cls.tmp)
 
     def run_script(
-        self, *units, existing=(), without_text=(), no_units=False, secrets=("s3cr3t",)
+        self,
+        *units,
+        existing=(),
+        without_text=(),
+        no_units=False,
+        ssm_values=("s3cr3t",),
     ) -> list:
         """Run the script for `units`, a list of (unit, plan) pairs.
 
         `plan` is the base path of `.json` and `.txt` files, or None for a
-        failed plan. `secrets` are the SSM values, None without the file.
+        failed plan. `ssm_values` are the SSM values, None without the file.
         """
         plans = Path(tempfile.mkdtemp(dir=self.tmp))
-        secrets_file = plans / "secrets"
-        if secrets is not None:
-            secrets_file.write_text(
-                "".join(f"{v}\n" for v in secrets), encoding="utf-8"
+        values_file = plans / "ssm-values"
+        if ssm_values is not None:
+            values_file.write_text(
+                "".join(f"{v}\n" for v in ssm_values), encoding="utf-8"
             )
         entries = []
         for unit, plan in units:
@@ -74,7 +79,7 @@ class PlanCommentTest(unittest.TestCase):
             **os.environ,
             "UNITS": "" if no_units else json.dumps(entries),
             "PLANS": str(plans),
-            "SECRETS": str(secrets_file),
+            "SECRETS": str(values_file),
             "APP_SLUG": APP,
         }
         result = subprocess.run(
@@ -405,35 +410,35 @@ class PlanCommentTest(unittest.TestCase):
             '      ~ email = "billing@example.com"',
             "    }",
         ]
-        base = self.write_plan("secrets", plan, "\n".join(lines))
-        secrets = ("billing@example.com", "line-1", "-----BEGIN KEY-----")
-        body = self.run_unit(base, secrets=secrets)[0]["body"]
-        for secret in ("billing@example.com", "line-1", "BEGIN KEY"):
-            self.assertNotIn(secret, body)
+        base = self.write_plan("redaction", plan, "\n".join(lines))
+        values = ("billing@example.com", "line-1", "-----BEGIN KEY-----")
+        body = self.run_unit(base, ssm_values=values)[0]["body"]
+        for value in ("billing@example.com", "line-1", "BEGIN KEY"):
+            self.assertNotIn(value, body)
         self.assertIn('email = "***"', body)
 
     def test_without_the_ssm_values_no_plan_is_published(self):
-        calls = self.run_script((UNIT, FIXTURES / "plan-changes"), secrets=None)
+        calls = self.run_script((UNIT, FIXTURES / "plan-changes"), ssm_values=None)
         self.assertEqual([c["call"] for c in calls], ["createComment"])
         self.assertIn("❌ The plan failed", calls[0]["body"])
         self.assertNotIn("terraform_data", calls[0]["body"])
 
     def test_an_empty_ssm_values_file_publishes_no_plan(self):
-        calls = self.run_script((UNIT, FIXTURES / "plan-changes"), secrets=())
+        calls = self.run_script((UNIT, FIXTURES / "plan-changes"), ssm_values=())
         self.assertEqual([c["call"] for c in calls], ["createComment"])
         self.assertIn("❌ The plan failed", calls[0]["body"])
 
     def test_truncated_diffs_are_redacted(self):
-        secret = "x" * 50
+        value = "x" * 50
         plan = {
             "resource_changes": [{"address": "a.b", "change": {"actions": ["update"]}}]
         }
         text = "Terraform will perform the following actions:\n\n" + (
-            f'  ~ v = "{secret}"\n' * 6000
+            f'  ~ v = "{value}"\n' * 6000
         )
-        body = self.run_unit(self.write_plan("cut", plan, text), secrets=(secret,))[0][
-            "body"
-        ]
+        body = self.run_unit(self.write_plan("cut", plan, text), ssm_values=(value,))[
+            0
+        ]["body"]
         self.assertIn("_The diff is truncated", body)
         self.assertNotIn("xxx", body)
 

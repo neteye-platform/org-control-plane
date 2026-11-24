@@ -7,8 +7,8 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location(
@@ -59,7 +59,7 @@ class TypeParserTest(unittest.TestCase):
         (tmp / "modules" / "sample" / "variables.tf").write_text(
             VARIABLES, encoding="utf-8"
         )
-        patcher = mock.patch.object(generate_schemas, "ROOT", tmp)
+        patcher = unittest.mock.patch.object(generate_schemas, "ROOT", tmp)
         patcher.start()
         self.addCleanup(patcher.stop)
 
