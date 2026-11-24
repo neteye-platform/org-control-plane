@@ -95,6 +95,10 @@ The permission is `pull`, `triage`, `push`, `maintain` or `admin`. The
 "category or repository tier" fields have no effect in the org defaults, and
 their schema rejects them.
 
+The final lists are authoritative: the control plane removes every other team,
+collaborator and invitation. A team with access from an organization role, such
+as `security_manager`, must be in the lists too.
+
 ### Labels
 
 | Field | Merge rule |

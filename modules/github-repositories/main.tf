@@ -45,25 +45,53 @@ resource "github_repository" "repos" {
   }
 }
 
-resource "github_team_repository" "access" {
-  for_each = local.team_access_configs
+# The provider compares the usernames with the logins case-sensitively.
+data "github_user" "collaborators" {
+  for_each = toset([for c in values(local.user_access_configs) : c.username])
 
-  team_id    = each.value.team
-  repository = github_repository.repos[each.value.repo_name].name
-  permission = each.value.permission
-
-  depends_on = [github_repository.repos]
+  username = each.key
 }
 
-# A new collaborator gets an invitation.
-resource "github_repository_collaborator" "access" {
-  for_each = local.user_access_configs
+# Authoritative: removes every other team, collaborator and invitation.
+resource "github_repository_collaborators" "access" {
+  for_each = local.repos
 
-  repository = github_repository.repos[each.value.repo_name].name
-  username   = each.value.username
-  permission = each.value.permission
+  repository = github_repository.repos[each.key].name
 
-  depends_on = [github_repository.repos]
+  dynamic "team" {
+    for_each = [for c in values(local.team_access_configs) : c if c.repo_name == each.key]
+
+    content {
+      team_id    = team.value.team
+      permission = team.value.permission
+    }
+  }
+
+  dynamic "user" {
+    for_each = [for c in values(local.user_access_configs) : c if c.repo_name == each.key]
+
+    content {
+      username   = data.github_user.collaborators[user.value.username].login
+      permission = user.value.permission
+    }
+  }
+}
+
+# Forgets the old per-team and per-user resources without removing the access.
+removed {
+  from = github_team_repository.access
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = github_repository_collaborator.access
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 # Authoritative: deletes every other label, GitHub defaults included.
