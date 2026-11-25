@@ -76,6 +76,8 @@ variable "settings" {
     }))
     # Always suggest to update pull request branches.
     allow_update_branch = optional(bool)
+    # Enable Dependabot security updates. Not managed when unset.
+    dependabot_security_updates = optional(bool)
 
     # Team permissions. The most specific tier that sets this list replaces the inherited one.
     team_access = optional(list(object({

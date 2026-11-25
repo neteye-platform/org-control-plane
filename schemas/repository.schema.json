@@ -146,6 +146,10 @@
       "description": "Always suggest to update pull request branches.",
       "type": "boolean"
     },
+    "dependabot_security_updates": {
+      "description": "Enable Dependabot security updates. Not managed when unset.",
+      "type": "boolean"
+    },
     "team_access": {
       "description": "Team permissions. The most specific tier that sets this list replaces the inherited one.",
       "type": "array",

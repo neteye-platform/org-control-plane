@@ -121,6 +121,47 @@ run "built_in_defaults" {
   }
 }
 
+run "dependabot_security_updates" {
+  command = plan
+
+  variables {
+    settings = {
+      defaults = {
+        org = { dependabot_security_updates = false }
+      }
+      repositories = {
+        inherits  = { name = "inherits", description = "Takes the org value" }
+        overrides = { name = "overrides", description = "Sets its own value", dependabot_security_updates = true }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      github_repository_dependabot_security_updates.repos["inherits"].enabled == false &&
+      github_repository_dependabot_security_updates.repos["overrides"].enabled == true
+    )
+    error_message = "dependabot_security_updates must come from the most specific tier"
+  }
+}
+
+run "dependabot_security_updates_unset" {
+  command = plan
+
+  variables {
+    settings = {
+      repositories = {
+        plain = { name = "plain", description = "No settings" }
+      }
+    }
+  }
+
+  assert {
+    condition     = length(github_repository_dependabot_security_updates.repos) == 0
+    error_message = "without the field, the security updates must not be managed"
+  }
+}
+
 run "team_access" {
   command = plan
 

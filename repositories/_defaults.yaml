@@ -15,6 +15,7 @@ squash_merge_commit_message: COMMIT_MESSAGES
 delete_branch_on_merge: true
 auto_init: false
 allow_update_branch: true
+dependabot_security_updates: false
 
 team_access:
   - team: rd-developers

@@ -82,6 +82,9 @@ resource that the schema lists: visibility, features (issues, wiki, ...),
 merge options, `topics`, `template`, `archived` and more. A scalar field comes
 from the most specific tier that sets it.
 
+`dependabot_security_updates` turns the Dependabot security updates on or off.
+When no tier sets it, the control plane does not manage them.
+
 ### Access
 
 | Field | Merge rule |

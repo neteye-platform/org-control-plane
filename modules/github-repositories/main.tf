@@ -45,6 +45,13 @@ resource "github_repository" "repos" {
   }
 }
 
+resource "github_repository_dependabot_security_updates" "repos" {
+  for_each = { for name, repo in local.repos : name => repo if repo.dependabot_security_updates != null }
+
+  repository = github_repository.repos[each.key].name
+  enabled    = each.value.dependabot_security_updates
+}
+
 # The provider compares the usernames with the logins case-sensitively.
 data "github_user" "collaborators" {
   for_each = toset([for c in values(local.user_access_configs) : c.username])
