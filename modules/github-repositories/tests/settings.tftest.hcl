@@ -2,6 +2,22 @@
 
 mock_provider "github" {}
 
+override_data {
+  target = data.github_user.collaborators["alice"]
+  values = { login = "alice" }
+}
+
+override_data {
+  target = data.github_user.collaborators["bob"]
+  values = { login = "bob" }
+}
+
+# The login on GitHub differs in case from the username in the YAML.
+override_data {
+  target = data.github_user.collaborators["carol"]
+  values = { login = "Carol" }
+}
+
 variables {
   settings = {
     defaults = {
@@ -121,18 +137,17 @@ run "team_access" {
 
   assert {
     condition = (
-      github_team_repository.access["inherits/developers"].permission == "maintain" &&
-      github_team_repository.access["inherits/squad"].permission == "admin" &&
-      github_team_repository.access["extends/squad"].permission == "push" &&
-      github_team_repository.access["extends/repo-team"].permission == "triage" &&
-      github_team_repository.access["overrides/owners"].permission == "maintain"
+      { for t in github_repository_collaborators.access["inherits"].team : t.team_id => t.permission } == { developers = "maintain", squad = "admin" } &&
+      { for t in github_repository_collaborators.access["extends"].team : t.team_id => t.permission }["squad"] == "push" &&
+      { for t in github_repository_collaborators.access["extends"].team : t.team_id => t.permission }["repo-team"] == "triage" &&
+      { for t in github_repository_collaborators.access["overrides"].team : t.team_id => t.permission } == { owners = "maintain" }
     )
     error_message = "extra_team_access must add teams and override the permission of a team, the repository tier last"
   }
 
   assert {
-    condition     = github_team_repository.access["inherits/developers"].team_id == "developers" && github_team_repository.access["inherits/developers"].repository == "inherits"
-    error_message = "the team slug and the repository must be passed to the resource"
+    condition     = github_repository_collaborators.access["inherits"].repository == "inherits"
+    error_message = "the repository must be passed to the resource"
   }
 }
 
@@ -148,12 +163,15 @@ run "user_access" {
 
   assert {
     condition = (
-      github_repository_collaborator.access["inherits/alice"].permission == "pull" &&
-      github_repository_collaborator.access["inherits/bob"].permission == "push" &&
-      github_repository_collaborator.access["extends/carol"].permission == "admin" &&
-      github_repository_collaborator.access["extends/carol"].username == "carol"
+      { for u in github_repository_collaborators.access["inherits"].user : u.username => u.permission } == { alice = "pull", bob = "push" } &&
+      { for u in github_repository_collaborators.access["extends"].user : u.username => u.permission }["Carol"] == "admin"
     )
-    error_message = "extra_user_access must add collaborators from the category and the repository"
+    error_message = "extra_user_access must add collaborators from the category and the repository, with the login from GitHub"
+  }
+
+  assert {
+    condition     = length(github_repository_collaborators.access["overrides"].user) == 0
+    error_message = "a repository without collaborators must still have the resource, so that every collaborator is removed"
   }
 }
 

@@ -19,6 +19,9 @@ allow_update_branch: true
 team_access:
   - team: rd-developers
     permission: push
+  # Also has this access from the security_manager role: listed so that it is not removed.
+  - team: rd-security-auditors
+    permission: pull
 
 branch_rulesets:
   main-branch-protection:
